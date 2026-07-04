@@ -1,13 +1,19 @@
-import 'package:intl/intl.dart';
+// File: lib/infrastructure/services/templates/classic_template.dart
+// Style: Inspired by Image 1 — ATS-friendly, serif header, bold section titles, bullet points
+
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../../../domain/entities/work_experience.dart';
+import '../../../domain/entities/education.dart';
+import '../../../domain/entities/skill.dart';
+import '../../../domain/entities/project.dart';
 import 'resume_template_base.dart';
 
 class ClassicTemplate implements ResumeTemplateBase {
-  static const PdfColor _navy = PdfColor.fromInt(0xFF1B2B44);
-  static const PdfColor _gold = PdfColor.fromInt(0xFFD4A92E);
-  static const PdfColor _lightGrey = PdfColor.fromInt(0xFFF5F5F5);
-  static const PdfColor _textGrey = PdfColor.fromInt(0xFF666666);
+  static const PdfColor _black      = PdfColor.fromInt(0xFF111111);
+  static const PdfColor _darkGrey   = PdfColor.fromInt(0xFF333333);
+  static const PdfColor _midGrey    = PdfColor.fromInt(0xFF666666);
+  static const PdfColor _divider    = PdfColor.fromInt(0xFF222222);
 
   @override
   Future<pw.Document> generate(ResumeData resume) async {
@@ -16,115 +22,69 @@ class ClassicTemplate implements ResumeTemplateBase {
     doc.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(0),
+        margin: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
         build: (context) => [
-          // ── HEADER ────────────────────────────────────────────
-          pw.Container(
-            width: double.infinity,
-            color: _navy,
-            padding: const pw.EdgeInsets.symmetric(
-              horizontal: 36,
-              vertical: 28,
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  resume.fullName,
-                  style: pw.TextStyle(
-                    fontSize: 28,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.white,
-                  ),
+
+          // ── HEADER ─────────────────────────────────────────────────────
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Text(
+                _toSmallCaps(resume.fullName),
+                textAlign: pw.TextAlign.center,
+                style: pw.TextStyle(
+                  fontSize: 22,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _black,
+                  letterSpacing: 1.0,
                 ),
-                if (resume.jobTitle != null) ...[
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    resume.jobTitle!,
-                    style: pw.TextStyle(
-                      fontSize: 14,
-                      color: _gold,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ],
-                pw.SizedBox(height: 12),
-                pw.Row(
-                  children: [
-                    _contactItem('✉', resume.email),
-                    if (resume.phone != null) ...[
-                      _contactDot(),
-                      _contactItem('✆', resume.phone!),
-                    ],
-                    if (resume.location != null) ...[
-                      _contactDot(),
-                      _contactItem('⌖', resume.location!),
-                    ],
-                  ],
-                ),
-              ],
-            ),
+              ),
+              pw.SizedBox(height: 5),
+              pw.Text(
+                _buildContactLine(resume),
+                textAlign: pw.TextAlign.center,
+                style: const pw.TextStyle(fontSize: 9, color: _midGrey),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Divider(color: _divider, thickness: 1.2),
+            ],
           ),
 
-          // ── BODY ──────────────────────────────────────────────
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(
-              horizontal: 36,
-              vertical: 24,
+          // ── SUMMARY ────────────────────────────────────────────────────
+          if (resume.summary != null) ...[
+            pw.SizedBox(height: 10),
+            _sectionHeader('PROFESSIONAL SUMMARY'),
+            pw.Text(
+              resume.summary!,
+              style: const pw.TextStyle(fontSize: 10, lineSpacing: 1.5, color: _darkGrey),
             ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
+            pw.SizedBox(height: 10),
+          ],
 
-                // Summary
-                if (resume.summary != null) ...[
-                  _sectionTitle('PROFESSIONAL SUMMARY'),
-                  pw.Text(
-                    resume.summary!,
-                    style: const pw.TextStyle(
-                      fontSize: 10.5,
-                      lineSpacing: 1.5,
-                    ),
-                  ),
-                  pw.SizedBox(height: 18),
-                ],
+          // ── EXPERIENCE ─────────────────────────────────────────────────
+          if (resume.workExperiences.isNotEmpty) ...[
+            _sectionHeader('PROFESSIONAL EXPERIENCE'),
+            ...resume.workExperiences.map((e) => _experienceBlock(e)),
+          ],
 
-                // Work Experience
-                if (resume.workExperiences.isNotEmpty) ...[
-                  _sectionTitle('WORK EXPERIENCE'),
-                  ...resume.workExperiences
-                      .map((exp) => _experienceItem(exp)),
-                  pw.SizedBox(height: 6),
-                ],
+          // ── EDUCATION ──────────────────────────────────────────────────
+          if (resume.educations.isNotEmpty) ...[
+            _sectionHeader('EDUCATION'),
+            ...resume.educations.map((e) => _educationBlock(e)),
+          ],
 
-                // Education
-                if (resume.educations.isNotEmpty) ...[
-                  _sectionTitle('EDUCATION'),
-                  ...resume.educations.map((edu) => _educationItem(edu)),
-                  pw.SizedBox(height: 6),
-                ],
+          // ── SKILLS ─────────────────────────────────────────────────────
+          if (resume.skills.isNotEmpty) ...[
+            _sectionHeader('SKILLS'),
+            _skillsGrid(resume.skills),
+            pw.SizedBox(height: 8),
+          ],
 
-                // Skills
-                if (resume.skills.isNotEmpty) ...[
-                  _sectionTitle('SKILLS'),
-                  pw.Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: resume.skills
-                        .map((skill) => _skillChip(skill))
-                        .toList(),
-                  ),
-                  pw.SizedBox(height: 18),
-                ],
-
-                // Projects
-                if (resume.projects.isNotEmpty) ...[
-                  _sectionTitle('PROJECTS'),
-                  ...resume.projects.map((proj) => _projectItem(proj)),
-                ],
-              ],
-            ),
-          ),
+          // ── PROJECTS ───────────────────────────────────────────────────
+          if (resume.projects.isNotEmpty) ...[
+            _sectionHeader('PROJECTS'),
+            ...resume.projects.map((p) => _projectBlock(p)),
+          ],
         ],
       ),
     );
@@ -132,33 +92,106 @@ class ClassicTemplate implements ResumeTemplateBase {
     return doc;
   }
 
-  pw.Widget _sectionTitle(String title) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          title,
-          style: pw.TextStyle(
-            fontSize: 11,
-            fontWeight: pw.FontWeight.bold,
-            color: _navy,
-            letterSpacing: 1.2,
+  String _toSmallCaps(String text) => text.toUpperCase();
+
+  String _buildContactLine(ResumeData resume) {
+    final parts = <String>[];
+    if (resume.location != null) parts.add(resume.location!);
+    parts.add(resume.email);
+    if (resume.phone != null) parts.add(resume.phone!);
+    return parts.join('  •  ');
+  }
+
+  pw.Widget _sectionHeader(String title) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(top: 10, bottom: 4),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            title,
+            style: pw.TextStyle(
+              fontSize: 10.5,
+              fontWeight: pw.FontWeight.bold,
+              color: _black,
+              letterSpacing: 0.5,
+            ),
           ),
-        ),
-        pw.SizedBox(height: 4),
-        pw.Container(height: 1.5, color: _gold),
-        pw.SizedBox(height: 10),
-      ],
+          pw.Divider(color: _divider, thickness: 0.8),
+          pw.SizedBox(height: 4),
+        ],
+      ),
     );
   }
 
-  pw.Widget _experienceItem(dynamic exp) {
-    final startDate = _formatDate(exp.startDate);
-    final endDate = exp.isCurrent ? 'Present' : _formatDate(exp.endDate);
-    final description = exp.description;
+  pw.Widget _experienceBlock(WorkExperience exp) {
+    final bullets = exp.description.isNotEmpty
+        ? exp.description
+            .split('\n')
+            .where((l) => l.trim().isNotEmpty)
+            .toList()
+        : <String>[];
 
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 14),
+      padding: const pw.EdgeInsets.only(bottom: 12),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          // Company + date row
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                exp.company,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10.5,
+                  color: _black,
+                ),
+              ),
+              pw.Text(
+                _formatDateRange(exp.startDate, exp.endDate, exp.isCurrent),
+                style: const pw.TextStyle(fontSize: 9.5, color: _midGrey),
+              ),
+            ],
+          ),
+          // Role
+          pw.Text(
+            exp.role,
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              color: _darkGrey,
+              fontStyle: pw.FontStyle.italic,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          // Bullet points
+          ...bullets.map(
+            (line) => pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 10, bottom: 2),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('• ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
+                  pw.Expanded(
+                    child: pw.Text(
+                      line.replaceAll(RegExp(r'^[•\-\*]\s*'), ''),
+                      style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _darkGrey),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _educationBlock(Education edu) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 10),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -166,182 +199,104 @@ class ClassicTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                exp.role,
-                style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 11.5,
-                  color: _navy,
-                ),
-              ),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 2,
-                ),
-                decoration: pw.BoxDecoration(
-                  color: _lightGrey,
-                  borderRadius: pw.BorderRadius.circular(3),
-                ),
-                child: pw.Text(
-                  '$startDate — $endDate',
-                  style: const pw.TextStyle(
-                    fontSize: 9.5,
-                    color: _textGrey,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 2),
-          pw.Text(
-            exp.company,
-            style: pw.TextStyle(
-              fontSize: 10.5,
-              color: _gold,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-          if (description != null && description.isNotEmpty) ...[
-            pw.SizedBox(height: 5),
-            pw.Text(
-              description,
-              style: const pw.TextStyle(
-                fontSize: 10,
-                lineSpacing: 1.4,
-                color: _textGrey,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  pw.Widget _educationItem(dynamic edu) {
-    final degree = edu.degree ?? '';
-    final gpa = edu.gpa;
-    final endDate = _formatDate(edu.endDate);
-
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 12),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                degree,
-                style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 11,
-                  color: _navy,
-                ),
-              ),
-              pw.Text(
                 edu.institution,
-                style: const pw.TextStyle(
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
                   fontSize: 10.5,
-                  color: _textGrey,
+                  color: _black,
                 ),
               ),
-              if (gpa != null)
-                pw.Text(
-                  'GPA: $gpa',
-                  style: const pw.TextStyle(
-                    fontSize: 9.5,
-                    color: _textGrey,
-                  ),
-                ),
+              pw.Text(
+                edu.endDate != null
+                    ? 'May ${edu.endDate!.year}'
+                    : '',
+                style: const pw.TextStyle(fontSize: 9.5, color: _midGrey),
+              ),
             ],
           ),
           pw.Text(
-            endDate,
-            style: const pw.TextStyle(fontSize: 9.5, color: _textGrey),
+            '${edu.degree} in ${edu.field}',
+            style: const pw.TextStyle(fontSize: 10, color: _darkGrey),
           ),
+          if (edu.gpa != null)
+            pw.Text(
+              'GPA: ${edu.gpa}',
+              style: const pw.TextStyle(fontSize: 9.5, color: _midGrey),
+            ),
         ],
       ),
     );
   }
 
-  pw.Widget _skillChip(dynamic skill) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: _navy, width: 0.8),
-        borderRadius: pw.BorderRadius.circular(4),
-      ),
-      child: pw.Text(
-        skill.name,
-        style: const pw.TextStyle(fontSize: 9.5, color: _navy),
-      ),
-    );
+  pw.Widget _skillsGrid(List<Skill> skills) {
+    // 4 columns grid like Image 1
+    final rows = <pw.Widget>[];
+    for (int i = 0; i < skills.length; i += 4) {
+      final rowSkills = skills.sublist(i, i + 4 > skills.length ? skills.length : i + 4);
+      rows.add(
+        pw.Row(
+          children: rowSkills.map((s) =>
+            pw.Expanded(
+              child: pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 3),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('• ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
+                    pw.Expanded(
+                      child: pw.Text(s.name, style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ).toList(),
+        ),
+      );
+    }
+    return pw.Column(children: rows);
   }
 
-  pw.Widget _projectItem(dynamic proj) {
-    final description = proj.description;
-    final techStack = proj.techStack as List<dynamic>? ?? [];
-
+  pw.Widget _projectBlock(Project proj) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 12),
+      padding: const pw.EdgeInsets.only(bottom: 10),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(
-            proj.name,
-            style: pw.TextStyle(
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 11,
-              color: _navy,
-            ),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                proj.name,
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _black),
+              ),
+            ],
           ),
-          if (description != null && description.isNotEmpty)
+          if (proj.techStack.isNotEmpty)
             pw.Text(
-              description,
-              style: const pw.TextStyle(fontSize: 10, color: _textGrey),
+              proj.techStack.join(', '),
+              style: pw.TextStyle(fontSize: 9.5, color: _darkGrey, fontStyle: pw.FontStyle.italic),
             ),
-          if (techStack.isNotEmpty) ...[
-            pw.SizedBox(height: 3),
-            pw.Text(
-              'Tech: ${techStack.join(', ')}',
-              style: pw.TextStyle(
-                fontSize: 9.5,
-                color: _gold,
-                fontWeight: pw.FontWeight.bold,
+          if (proj.description.isNotEmpty)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 10, top: 2),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('• ', style: const pw.TextStyle(fontSize: 9.5)),
+                  pw.Expanded(
+                    child: pw.Text(proj.description, style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _darkGrey)),
+                  ),
+                ],
               ),
             ),
-          ],
         ],
       ),
     );
   }
 
-  pw.Widget _contactItem(String icon, String text) {
-    return pw.Row(
-      children: [
-        pw.Text(icon,
-            style: const pw.TextStyle(fontSize: 9, color: _gold)),
-        pw.SizedBox(width: 4),
-        pw.Text(text,
-            style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.white)),
-      ],
-    );
-  }
-
-  pw.Widget _contactDot() {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 8),
-      child: pw.Text('•',
-          style: const pw.TextStyle(fontSize: 9, color: _textGrey)),
-    );
-  }
-
-  String _formatDate(dynamic date) {
-    if (date == null) return '';
-    if (date is DateTime) {
-      return DateFormat('MMM yyyy').format(date);
-    }
-    return date.toString();
+  String _formatDateRange(DateTime start, DateTime? end, bool isCurrent) {
+    final endStr = isCurrent ? 'Present' : (end != null ? '${end.year}' : '');
+    return '${start.year} – $endStr';
   }
 }

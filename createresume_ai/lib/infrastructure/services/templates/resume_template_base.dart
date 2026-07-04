@@ -1,4 +1,8 @@
 import 'package:pdf/widgets.dart' as pw;
+import '../../../domain/entities/work_experience.dart';
+import '../../../domain/entities/education.dart';
+import '../../../domain/entities/skill.dart';
+import '../../../domain/entities/project.dart';
 
 /// Data model for PDF generation - combines Resume entity with user personal info
 class ResumeData {
@@ -8,10 +12,10 @@ class ResumeData {
   final String? phone;
   final String? location;
   final String? summary;
-  final List<dynamic> workExperiences;
-  final List<dynamic> educations;
-  final List<dynamic> skills;
-  final List<dynamic> projects;
+  final List<WorkExperience> workExperiences;
+  final List<Education> educations;
+  final List<Skill> skills;
+  final List<Project> projects;
 
   const ResumeData({
     required this.fullName,

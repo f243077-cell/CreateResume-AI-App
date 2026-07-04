@@ -23,11 +23,7 @@ Future<void> main() async {
   // Initialize Hive for offline caching
   await Hive.initFlutter();
 
-  runApp(
-    const ProviderScope(
-      child: CreateResumeApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: CreateResumeApp()));
 }
 
 /// Root application widget.

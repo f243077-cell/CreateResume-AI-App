@@ -74,17 +74,6 @@ class HomeDashboardScreen extends ConsumerWidget {
                           ),
                           Semantics(
                             button: true,
-                            label: 'Create cover letter',
-                            child: QuickActionCard(
-                              icon: Icons.help_outline_rounded,
-                              label: 'Create Cover Letter',
-                              iconColor: AppColors.warning,
-                              onTap: () =>
-                                  context.pushNamed(AppRouteNames.aiTools),
-                            ),
-                          ),
-                          Semantics(
-                            button: true,
                             label: 'Track applications',
                             child: QuickActionCard(
                               icon: Icons.view_kanban_rounded,
@@ -92,6 +81,17 @@ class HomeDashboardScreen extends ConsumerWidget {
                               iconColor: AppColors.navy800,
                               onTap: () =>
                                   context.goNamed(AppRouteNames.applicationTracker),
+                            ),
+                          ),
+                          Semantics(
+                            button: true,
+                            label: 'View all resumes',
+                            child: QuickActionCard(
+                              icon: Icons.folder_rounded,
+                              label: 'All Resumes',
+                              iconColor: AppColors.success,
+                              onTap: () =>
+                                  context.pushNamed(AppRouteNames.allResumes),
                             ),
                           ),
                         ],
@@ -321,7 +321,7 @@ class _DashboardInsights extends ConsumerWidget {
                 ),
               ),
               TextButton(
-                onPressed: () => context.pushNamed(AppRouteNames.resumeWizard),
+                onPressed: () => context.pushNamed(AppRouteNames.allResumes),
                 child: const Text('View All'),
               ),
             ],

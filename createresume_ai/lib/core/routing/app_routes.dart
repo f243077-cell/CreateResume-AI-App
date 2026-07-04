@@ -8,17 +8,21 @@ abstract final class AppRoutes {
   static const home = '/home';
   static const resumeWizard = '/resume-wizard';
   static const resumeEditor = '/resume-editor';
+  static const allResumes = '/all-resumes';
   static const resumeAnalyzer = '/resume-analyzer';
   static const applicationTracker = '/application-tracker';
-  static const aiTools = '/ai-tools';
   static const profile = '/profile';
   static const subscription = '/subscription';
+  static const templateSelection = '/template-selection';
 
   static String resumeEditorPath(String resumeId) =>
       '$resumeEditor/$resumeId';
 
   static String resumeAnalyzerPath(String resumeId) =>
       '$resumeAnalyzer/$resumeId';
+
+  static String templateSelectionPath(String resumeId) =>
+      '$templateSelection/$resumeId';
 }
 
 abstract final class AppRouteNames {
@@ -30,10 +34,11 @@ abstract final class AppRouteNames {
   static const home = 'home';
   static const resumeWizard = 'resumeWizard';
   static const resumeEditor = 'resumeEditor';
+  static const allResumes = 'allResumes';
   static const resumeAnalyzer = 'resumeAnalyzer';
   static const resumeAnalyzerDetail = 'resumeAnalyzerDetail';
   static const applicationTracker = 'applicationTracker';
-  static const aiTools = 'aiTools';
   static const profile = 'profile';
   static const subscription = 'subscription';
+  static const templateSelection = 'templateSelection';
 }

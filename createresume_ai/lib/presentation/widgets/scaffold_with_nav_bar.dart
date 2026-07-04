@@ -65,10 +65,6 @@ class ScaffoldWithNavBar extends ConsumerWidget {
             label: 'Tracker',
           ),
           NavigationDestination(
-            icon: Icon(Icons.auto_awesome_rounded),
-            label: 'AI Tools',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.person_rounded),
             label: 'Profile',
           ),

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'application/providers/auth_state_provider.dart';
 import 'core/routing/app_routes.dart';
-import 'presentation/modules/ai_tool_library/screens/ai_tool_library_screen.dart';
+import 'presentation/modules/all_resumes/screens/all_resumes_screen.dart';
 import 'presentation/modules/application_tracker/screens/application_tracker_screen.dart';
 import 'presentation/modules/authentication/forgot_password_screen.dart';
 import 'presentation/modules/authentication/login_screen.dart';
@@ -16,6 +16,7 @@ import 'presentation/modules/resume_analyzer/screens/resume_picker_screen.dart';
 import 'presentation/modules/resume_editor/screens/resume_editor_screen.dart';
 import 'presentation/modules/resume_wizard/screens/resume_wizard_screen.dart';
 import 'presentation/modules/subscription/screens/subscription_screen.dart';
+import 'presentation/modules/template_selection/screens/template_selection_screen.dart';
 import 'presentation/modules/user_profile_settings/screens/user_profile_screen.dart';
 import 'presentation/widgets/scaffold_with_nav_bar.dart';
 
@@ -85,6 +86,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ResumeWizardScreen(),
       ),
       GoRoute(
+        path: AppRoutes.allResumes,
+        name: AppRouteNames.allResumes,
+        builder: (context, state) => const AllResumesScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.templateSelection}/:resumeId',
+        name: AppRouteNames.templateSelection,
+        builder: (context, state) {
+          final resumeId = state.pathParameters['resumeId']!;
+          return TemplateSelectionScreen(resumeId: resumeId);
+        },
+      ),
+      GoRoute(
         path: '${AppRoutes.resumeEditor}/:resumeId',
         name: AppRouteNames.resumeEditor,
         builder: (context, state) {
@@ -136,15 +150,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: AppRoutes.applicationTracker,
                 name: AppRouteNames.applicationTracker,
                 builder: (context, state) => const ApplicationTrackerScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.aiTools,
-                name: AppRouteNames.aiTools,
-                builder: (context, state) => const AiToolLibraryScreen(),
               ),
             ],
           ),

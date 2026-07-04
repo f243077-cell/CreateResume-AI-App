@@ -19,7 +19,7 @@ class ResumeWizardScreen extends ConsumerStatefulWidget {
 
 class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
   final PageController _pageController = PageController();
-  static const int _totalPages = 5;
+  static const int _totalPages = 4;
 
   final _titleController = TextEditingController();
   final _industryController = TextEditingController();
@@ -63,15 +63,13 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
   Future<void> _submit() async {
     final careerStage =
         ref.read(resumeWizardProvider.select((s) => s.careerStage));
-    final templateId =
-        ref.read(resumeWizardProvider.select((s) => s.templateId));
 
     // Call the new AI generation provider
     ref.read(resumeGenerationProvider.notifier).generateResume(
       description: _descriptionController.text,
       careerStage: careerStage?.name ?? 'entry-level',
       jobTitle: _titleController.text,
-      templateId: templateId ?? 'modern',
+      templateId: null, // Will be selected after generation
     );
   }
 
@@ -157,7 +155,6 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
                       _buildCareerStageStep(theme),
                       _buildIndustryTitleStep(theme),
                       _buildJobDescriptionStep(theme),
-                      _buildTemplateStep(theme),
                       _buildUserDescriptionStep(theme),
                     ],
                   ),
@@ -303,90 +300,6 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
               hintText: 'Paste the job description here...',
               alignLabelWithHint: true,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTemplateStep(ThemeData theme) {
-    final selectedTemplateId =
-        ref.watch(resumeWizardProvider.select((s) => s.templateId));
-    // Hardcoded templates for UI presentation
-    final templates = [
-      {'id': 'modern', 'name': 'ATS Modern', 'tag': 'BEST FOR TECH'},
-      {'id': 'executive', 'name': 'Executive', 'tag': 'BEST FOR LEADERSHIP'},
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            "Select a Template",
-            style: theme.textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 32),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.8,
-            ),
-            itemCount: templates.length,
-            itemBuilder: (context, index) {
-              final template = templates[index];
-              final isSelected = selectedTemplateId == template['id'];
-
-              return Semantics(
-                button: true,
-                label: 'Select ${template["name"]} template',
-                child: InkWell(
-                  onTap: () {
-                    ref
-                        .read(resumeWizardProvider.notifier)
-                        .updateTemplateId(template['id']!);
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? AppColors.blue400 : AppColors.border,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.description_rounded,
-                          size: 48,
-                          color: isSelected
-                              ? AppColors.navy800
-                              : AppColors.textTertiary,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          template['name']!,
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          template['tag']!,
-                          style: theme.textTheme.labelSmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
           ),
         ],
       ),

@@ -11,6 +11,7 @@ class ResumeWizardState {
   final String targetJobTitle;
   final String industry;
   final String? templateId;
+  final String? templateCategory;
   final String jobDescription;
   final bool isLoading;
   final String? error;
@@ -22,6 +23,7 @@ class ResumeWizardState {
     this.targetJobTitle = '',
     this.industry = '',
     this.templateId,
+    this.templateCategory,
     this.jobDescription = '',
     this.isLoading = false,
     this.error,
@@ -34,6 +36,7 @@ class ResumeWizardState {
     String? targetJobTitle,
     String? industry,
     String? templateId,
+    String? templateCategory,
     String? jobDescription,
     bool? isLoading,
     String? error,
@@ -45,6 +48,7 @@ class ResumeWizardState {
       targetJobTitle: targetJobTitle ?? this.targetJobTitle,
       industry: industry ?? this.industry,
       templateId: templateId ?? this.templateId,
+      templateCategory: templateCategory ?? this.templateCategory,
       jobDescription: jobDescription ?? this.jobDescription,
       isLoading: isLoading ?? this.isLoading,
       error: error,
@@ -71,6 +75,9 @@ class ResumeWizardNotifier extends Notifier<ResumeWizardState> {
 
   void updateTemplateId(String templateId) =>
       state = state.copyWith(templateId: templateId);
+
+  void updateTemplateCategory(String category) =>
+      state = state.copyWith(templateCategory: category, templateId: null);
 
   void setPageIndex(int index) =>
       state = state.copyWith(currentPageIndex: index);

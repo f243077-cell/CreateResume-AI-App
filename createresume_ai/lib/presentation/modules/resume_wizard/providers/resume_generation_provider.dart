@@ -28,16 +28,16 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
   /// - [description]: User's self-description (experience, skills, education)
   /// - [careerStage]: Career stage (entry-level, mid-level, senior, executive)
   /// - [jobTitle]: Target job title for the resume
-  /// - [templateId]: Template ID to use for the resume
+  /// - [templateId]: Template ID to use for the resume (nullable, selected after generation)
   ///
   /// Sets state to AsyncValue.loading() while generating.
-  /// On success: sets state to AsyncValue.data(resume) and navigates to ResumeEditor.
+  /// On success: sets state to AsyncValue.data(resume) and navigates to TemplateSelection.
   /// On failure: sets state to AsyncValue.error(...).
   Future<void> generateResume({
     required String description,
     required String careerStage,
     required String jobTitle,
-    required String templateId,
+    String? templateId,
   }) async {
     try {
       // Get userId from auth state provider
@@ -56,7 +56,7 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
         description: description,
         careerStage: careerStage,
         jobTitle: jobTitle,
-        templateId: templateId,
+        templateId: templateId ?? 'modern', // Default to modern if not selected
         userId: user.id,
       );
 
@@ -66,9 +66,9 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
         },
         (resume) {
           state = AsyncValue.data(resume);
-          // Navigate to ResumeEditor screen with the generated resume
+          // Navigate to TemplateSelection screen to choose template style
           ref.read(routerProvider).pushNamed(
-            AppRouteNames.resumeEditor,
+            AppRouteNames.templateSelection,
             pathParameters: {'resumeId': resume.id},
           );
         },
