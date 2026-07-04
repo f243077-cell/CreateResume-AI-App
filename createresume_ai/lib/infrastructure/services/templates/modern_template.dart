@@ -140,7 +140,6 @@ class ModernTemplate implements ResumeTemplateBase {
     final expert = skills.where((s) => s.level == 'expert').toList();
     final intermediate = skills.where((s) => s.level == 'intermediate').toList();
     final beginner = skills.where((s) => s.level == 'beginner').toList();
-    final all = [...expert, ...intermediate, ...beginner];
 
     // Display as labeled rows
     final rows = <pw.Widget>[];
@@ -228,7 +227,7 @@ class ModernTemplate implements ResumeTemplateBase {
                   fontStyle: pw.FontStyle.italic,
                 ),
               ),
-              if (exp.description != null && exp.description!.contains('View Certificate'))
+              if (exp.description.contains('View Certificate'))
                 pw.Text(
                   'View Certificate',
                   style: const pw.TextStyle(fontSize: 8.5, color: _accent),

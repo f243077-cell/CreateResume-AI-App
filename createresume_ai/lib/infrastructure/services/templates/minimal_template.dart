@@ -97,7 +97,7 @@ class MinimalTemplate implements ResumeTemplateBase {
           if (resume.skills.isNotEmpty) ...[
             _sectionTitle('Skills'),
             pw.Text(
-              resume.skills.map((s) => s.name ?? '').join('   ·   '),
+              resume.skills.map((s) => s.name).join('   ·   '),
               style: const pw.TextStyle(
                 fontSize: 10,
                 color: _black,

@@ -255,11 +255,10 @@ class ExecutiveTemplate implements ResumeTemplateBase {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  edu.degree ?? '',
+                  edu.degree,
                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: _navy),
                 ),
-                if (edu.field != null)
-                  pw.Text(edu.field!, style: const pw.TextStyle(fontSize: 10, color: _textGrey)),
+                pw.Text(edu.field, style: const pw.TextStyle(fontSize: 10, color: _textGrey)),
                 pw.Text(
                   edu.institution,
                   style: pw.TextStyle(fontSize: 10, color: _gold, fontWeight: pw.FontWeight.bold),
@@ -271,7 +270,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
               children: [
                 if (edu.endDate != null)
                   pw.Text(
-                    '${edu.startDate?.year ?? ''} – ${edu.endDate!.year}',
+                    '${edu.startDate.year} – ${edu.endDate!.year}',
                     style: const pw.TextStyle(fontSize: 9.5, color: _midGrey),
                   ),
                 if (edu.gpa != null)

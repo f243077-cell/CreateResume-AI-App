@@ -245,12 +245,12 @@ class Executive2Template implements ResumeTemplateBase {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            edu.degree ?? '',
+            edu.degree,
             style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: _white),
           ),
           pw.Text(edu.institution, style: const pw.TextStyle(fontSize: 8, color: _accent)),
           pw.Text(
-            edu.endDate != null ? '${edu.startDate?.year ?? ''} – ${edu.endDate!.year}' : '',
+            edu.endDate != null ? '${edu.startDate.year} – ${edu.endDate!.year}' : '',
             style: const pw.TextStyle(fontSize: 7.5, color: _sideText),
           ),
           if (edu.gpa != null)
@@ -277,8 +277,8 @@ class Executive2Template implements ResumeTemplateBase {
   }
 
   pw.Widget _mainExpBlock(WorkExperience exp) {
-    final bullets = exp.description != null
-        ? exp.description!.split('\n').where((l) => l.trim().isNotEmpty).toList()
+    final bullets = exp.description.isNotEmpty
+        ? exp.description.split('\n').where((l) => l.trim().isNotEmpty).toList()
         : <String>[];
 
     return pw.Padding(
