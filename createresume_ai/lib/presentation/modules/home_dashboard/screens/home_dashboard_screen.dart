@@ -63,28 +63,6 @@ class HomeDashboardScreen extends ConsumerWidget {
                           ),
                           Semantics(
                             button: true,
-                            label: 'Analyze resume',
-                            child: QuickActionCard(
-                              icon: Icons.analytics_rounded,
-                              label: 'Analyze Resume',
-                              iconColor: AppColors.blue400,
-                              onTap: () =>
-                                  context.goNamed(AppRouteNames.resumeAnalyzer),
-                            ),
-                          ),
-                          Semantics(
-                            button: true,
-                            label: 'Track applications',
-                            child: QuickActionCard(
-                              icon: Icons.view_kanban_rounded,
-                              label: 'Track Applications',
-                              iconColor: AppColors.navy800,
-                              onTap: () =>
-                                  context.goNamed(AppRouteNames.applicationTracker),
-                            ),
-                          ),
-                          Semantics(
-                            button: true,
                             label: 'View all resumes',
                             child: QuickActionCard(
                               icon: Icons.folder_rounded,

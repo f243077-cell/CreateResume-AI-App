@@ -8,6 +8,23 @@ class MinimalTemplate implements ResumeTemplateBase {
   static const PdfColor _gold = PdfColor.fromInt(0xFFD4A92E);
   static const PdfColor _lightGrey = PdfColor.fromInt(0xFF999999);
 
+  /// Replaces Unicode punctuation that the default PDF font can't render
+  /// (en/em dashes, smart quotes, ellipsis, non-breaking spaces) with safe
+  /// ASCII equivalents. Without this, unsupported glyphs render as empty
+  /// "tofu" boxes in the generated PDF.
+  static String _sanitize(String text) {
+    return text
+        .replaceAll('\u2013', '-')  // – en dash
+        .replaceAll('\u2014', '-')  // — em dash
+        .replaceAll('\u2018', "'")  // ‘ left single quote
+        .replaceAll('\u2019', "'")  // ’ right single quote
+        .replaceAll('\u201C', '"')  // “ left double quote
+        .replaceAll('\u201D', '"')  // ” right double quote
+        .replaceAll('\u2026', '...') // … ellipsis
+        .replaceAll('\u00A0', ' ')  // non-breaking space
+        .replaceAll('\u2022', '-'); // • bullet
+  }
+
   @override
   Future<pw.Document> generate(ResumeData resume) async {
     final doc = pw.Document();
@@ -25,7 +42,7 @@ class MinimalTemplate implements ResumeTemplateBase {
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               pw.Text(
-                resume.fullName.toUpperCase(),
+                _sanitize(resume.fullName).toUpperCase(),
                 textAlign: pw.TextAlign.center,
                 style: pw.TextStyle(
                   fontSize: 26,
@@ -37,7 +54,7 @@ class MinimalTemplate implements ResumeTemplateBase {
               if (resume.jobTitle != null) ...[
                 pw.SizedBox(height: 5),
                 pw.Text(
-                  resume.jobTitle!,
+                  _sanitize(resume.jobTitle!),
                   textAlign: pw.TextAlign.center,
                   style: const pw.TextStyle(
                     fontSize: 12,
@@ -49,7 +66,7 @@ class MinimalTemplate implements ResumeTemplateBase {
 
               // Contact row — centered with dots
               pw.Text(
-                _buildContactLine(resume),
+                _sanitize(_buildContactLine(resume)),
                 textAlign: pw.TextAlign.center,
                 style: const pw.TextStyle(
                   fontSize: 9.5,
@@ -68,7 +85,7 @@ class MinimalTemplate implements ResumeTemplateBase {
           if (resume.summary != null) ...[
             _sectionTitle('Summary'),
             pw.Text(
-              resume.summary!,
+              _sanitize(resume.summary!),
               style: const pw.TextStyle(
                 fontSize: 10.5,
                 lineSpacing: 1.6,
@@ -97,7 +114,7 @@ class MinimalTemplate implements ResumeTemplateBase {
           if (resume.skills.isNotEmpty) ...[
             _sectionTitle('Skills'),
             pw.Text(
-              resume.skills.map((s) => s.name).join('   ·   '),
+              _sanitize(resume.skills.map((s) => s.name).join('   ·   ')),
               style: const pw.TextStyle(
                 fontSize: 10,
                 color: _black,
@@ -163,7 +180,7 @@ class MinimalTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                exp.role,
+                _sanitize(exp.role),
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
                   fontSize: 11,
@@ -171,7 +188,7 @@ class MinimalTemplate implements ResumeTemplateBase {
                 ),
               ),
               pw.Text(
-                '$startDate – $endDate',
+                '$startDate - $endDate',
                 style: const pw.TextStyle(
                     fontSize: 9.5, color: _lightGrey),
               ),
@@ -179,7 +196,7 @@ class MinimalTemplate implements ResumeTemplateBase {
           ),
           pw.SizedBox(height: 2),
           pw.Text(
-            exp.company,
+            _sanitize(exp.company),
             style: const pw.TextStyle(
               fontSize: 10,
               color: _lightGrey,
@@ -188,7 +205,7 @@ class MinimalTemplate implements ResumeTemplateBase {
           if (description != null && description.isNotEmpty) ...[
             pw.SizedBox(height: 5),
             pw.Text(
-              description,
+              _sanitize(description),
               style: const pw.TextStyle(
                 fontSize: 10,
                 lineSpacing: 1.5,
@@ -216,7 +233,7 @@ class MinimalTemplate implements ResumeTemplateBase {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                field != null ? '$degree · $field' : degree,
+                _sanitize(field != null ? '$degree · $field' : degree),
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
                   fontSize: 10.5,
@@ -224,7 +241,7 @@ class MinimalTemplate implements ResumeTemplateBase {
                 ),
               ),
               pw.Text(
-                edu.institution,
+                _sanitize(edu.institution),
                 style: const pw.TextStyle(
                     fontSize: 10, color: _lightGrey),
               ),
@@ -254,7 +271,7 @@ class MinimalTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                proj.name,
+                _sanitize(proj.name),
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
                   fontSize: 10.5,
@@ -263,7 +280,7 @@ class MinimalTemplate implements ResumeTemplateBase {
               ),
               if (url != null)
                 pw.Text(
-                  url,
+                  _sanitize(url),
                   style: const pw.TextStyle(
                     fontSize: 8.5,
                     color: _gold,
@@ -273,14 +290,14 @@ class MinimalTemplate implements ResumeTemplateBase {
           ),
           if (description != null && description.isNotEmpty)
             pw.Text(
-              description,
+              _sanitize(description),
               style: const pw.TextStyle(
                   fontSize: 10, color: _black, lineSpacing: 1.4),
             ),
           if (techStack.isNotEmpty) ...[
             pw.SizedBox(height: 3),
             pw.Text(
-              techStack.join(' · '),
+              _sanitize(techStack.join(' · ')),
               style: const pw.TextStyle(
                   fontSize: 9, color: _lightGrey),
             ),

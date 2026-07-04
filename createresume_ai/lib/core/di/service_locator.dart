@@ -9,6 +9,7 @@ import '../../application/use_cases/auth/sign_out_use_case.dart';
 import '../../application/use_cases/auth/sign_up_use_case.dart';
 import '../../application/use_cases/resume/analyze_ats_compatibility_use_case.dart';
 import '../../application/use_cases/resume/create_resume_use_case.dart';
+import '../../application/use_cases/resume/delete_resume_use_case.dart';
 import '../../application/use_cases/resume/export_resume_as_pdf_use_case.dart';
 import '../../application/use_cases/resume/generate_resume_with_ai_use_case.dart';
 import '../../application/use_cases/resume/get_resume_by_id_use_case.dart';
@@ -153,6 +154,10 @@ final createResumeUseCaseProvider = Provider<CreateResumeUseCase>(
 
 final updateResumeUseCaseProvider = Provider<UpdateResumeUseCase>(
   (ref) => UpdateResumeUseCase(ref.watch(resumeRepositoryProvider)),
+);
+
+final deleteResumeUseCaseProvider = Provider<DeleteResumeUseCase>(
+  (ref) => DeleteResumeUseCase(ref.watch(resumeRepositoryProvider)),
 );
 
 final improveResumeSectionUseCaseProvider =

@@ -16,6 +16,23 @@ class ModernTemplate implements ResumeTemplateBase {
   static const PdfColor _midGrey  = PdfColor.fromInt(0xFF555555);
   static const PdfColor _accent   = PdfColor.fromInt(0xFF1A56A0); // blue links
 
+  /// Replaces Unicode punctuation/symbols that the default PDF font can't
+  /// render (en/em dashes, smart quotes, ellipsis, emoji/icon glyphs) with
+  /// safe ASCII equivalents. Without this, unsupported glyphs render as
+  /// empty "tofu" boxes in the generated PDF.
+  static String _sanitize(String text) {
+    return text
+        .replaceAll('\u2013', '-')  // – en dash
+        .replaceAll('\u2014', '-')  // — em dash
+        .replaceAll('\u2018', "'")  // ‘ left single quote
+        .replaceAll('\u2019', "'")  // ’ right single quote
+        .replaceAll('\u201C', '"')  // “ left double quote
+        .replaceAll('\u201D', '"')  // ” right double quote
+        .replaceAll('\u2026', '...') // … ellipsis
+        .replaceAll('\u00A0', ' ')  // non-breaking space
+        .replaceAll('\u2022', '-'); // • bullet
+  }
+
   @override
   Future<pw.Document> generate(ResumeData resume) async {
     final doc = pw.Document();
@@ -31,7 +48,7 @@ class ModernTemplate implements ResumeTemplateBase {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                resume.fullName.toUpperCase(),
+                _sanitize(resume.fullName).toUpperCase(),
                 style: pw.TextStyle(
                   fontSize: 20,
                   fontWeight: pw.FontWeight.bold,
@@ -42,19 +59,19 @@ class ModernTemplate implements ResumeTemplateBase {
               if (resume.jobTitle != null) ...[
                 pw.SizedBox(height: 2),
                 pw.Text(
-                  resume.jobTitle!,
+                  _sanitize(resume.jobTitle!),
                   style: const pw.TextStyle(fontSize: 11, color: _midGrey),
                 ),
               ],
               pw.SizedBox(height: 6),
-              // Contact row with icons inline
+              // Contact row with plain-text labels
               pw.Wrap(
                 spacing: 16,
                 children: [
-                  _contactItem('📞', resume.phone ?? ''),
-                  _contactItem('✉', resume.email),
+                  _contactItem('Phone:', resume.phone ?? ''),
+                  _contactItem('Email:', resume.email),
                   if (resume.location != null)
-                    _contactItem('📍', resume.location!),
+                    _contactItem('Location:', resume.location!),
                 ],
               ),
               pw.SizedBox(height: 8),
@@ -66,7 +83,7 @@ class ModernTemplate implements ResumeTemplateBase {
           if (resume.summary != null) ...[
             _sectionTitle('Summary'),
             pw.Text(
-              resume.summary!,
+              _sanitize(resume.summary!),
               style: const pw.TextStyle(fontSize: 10, lineSpacing: 1.6, color: _darkGrey),
             ),
             pw.SizedBox(height: 8),
@@ -124,13 +141,13 @@ class ModernTemplate implements ResumeTemplateBase {
     );
   }
 
-  pw.Widget _contactItem(String icon, String text) {
+  pw.Widget _contactItem(String label, String text) {
     return pw.Row(
       mainAxisSize: pw.MainAxisSize.min,
       children: [
-        pw.Text(icon, style: const pw.TextStyle(fontSize: 8.5)),
+        pw.Text(label, style: const pw.TextStyle(fontSize: 8.5, color: _darkGrey)),
         pw.SizedBox(width: 3),
-        pw.Text(text, style: const pw.TextStyle(fontSize: 9, color: _darkGrey)),
+        pw.Text(_sanitize(text), style: const pw.TextStyle(fontSize: 9, color: _darkGrey)),
       ],
     );
   }
@@ -165,7 +182,7 @@ class ModernTemplate implements ResumeTemplateBase {
               ),
               pw.Expanded(
                 child: pw.Text(
-                  list.map((s) => s.name).join(', '),
+                  _sanitize(list.map((s) => s.name).join(', ')),
                   style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey, lineSpacing: 1.4),
                 ),
               ),
@@ -182,7 +199,7 @@ class ModernTemplate implements ResumeTemplateBase {
     } else {
       // No levels — just show all as comma-separated
       rows.add(pw.Text(
-        skills.map((s) => s.name).join(' • '),
+        _sanitize(skills.map((s) => s.name).join(' - ')),
         style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey, lineSpacing: 1.5),
       ));
     }
@@ -205,7 +222,7 @@ class ModernTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                exp.company,
+                _sanitize(exp.company),
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _black),
               ),
               pw.Text(
@@ -219,7 +236,7 @@ class ModernTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                exp.role,
+                _sanitize(exp.role),
                 style: pw.TextStyle(
                   fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
@@ -242,10 +259,10 @@ class ModernTemplate implements ResumeTemplateBase {
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('•  ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
+                  pw.Text('-  ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
                   pw.Expanded(
                     child: pw.Text(
-                      line.replaceAll(RegExp(r'^[•\-\*]\s*'), ''),
+                      _sanitize(line.replaceAll(RegExp(r'^[•\-\*]\s*'), '')),
                       style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.45, color: _darkGrey),
                     ),
                   ),
@@ -268,7 +285,7 @@ class ModernTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                proj.name,
+                _sanitize(proj.name),
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _black),
               ),
               if (proj.url != null && proj.url!.isNotEmpty)
@@ -277,7 +294,7 @@ class ModernTemplate implements ResumeTemplateBase {
           ),
           if (proj.techStack.isNotEmpty)
             pw.Text(
-              proj.techStack.join(', '),
+              _sanitize(proj.techStack.join(', ')),
               style: pw.TextStyle(fontSize: 9.5, color: _midGrey, fontStyle: pw.FontStyle.italic),
             ),
           if (proj.description.isNotEmpty) ...[
@@ -290,10 +307,10 @@ class ModernTemplate implements ResumeTemplateBase {
                       child: pw.Row(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('•  ', style: const pw.TextStyle(fontSize: 9.5)),
+                          pw.Text('-  ', style: const pw.TextStyle(fontSize: 9.5)),
                           pw.Expanded(
                             child: pw.Text(
-                              line.replaceAll(RegExp(r'^[•\-\*]\s*'), ''),
+                              _sanitize(line.replaceAll(RegExp(r'^[•\-\*]\s*'), '')),
                               style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _darkGrey),
                             ),
                           ),
@@ -317,11 +334,11 @@ class ModernTemplate implements ResumeTemplateBase {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                edu.institution,
+                _sanitize(edu.institution),
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _black),
               ),
               pw.Text(
-                '${edu.degree} in ${edu.field}',
+                _sanitize('${edu.degree} in ${edu.field}'),
                 style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey),
               ),
               if (edu.gpa != null)
@@ -330,7 +347,7 @@ class ModernTemplate implements ResumeTemplateBase {
           ),
           pw.Text(
             edu.endDate != null
-                ? '${_monthName(edu.startDate.month)} ${edu.startDate.year} – ${_monthName(edu.endDate!.month)} ${edu.endDate!.year}'
+                ? '${_monthName(edu.startDate.month)} ${edu.startDate.year} - ${_monthName(edu.endDate!.month)} ${edu.endDate!.year}'
                 : '',
             style: const pw.TextStyle(fontSize: 9, color: _midGrey),
           ),
@@ -342,7 +359,7 @@ class ModernTemplate implements ResumeTemplateBase {
   String _dateRange(DateTime start, DateTime? end, bool isCurrent) {
     final startStr = '${_monthName(start.month)} ${start.year}';
     final endStr = isCurrent ? 'Present' : (end != null ? '${_monthName(end.month)} ${end.year}' : '');
-    return '$startStr – $endStr';
+    return '$startStr - $endStr';
   }
 
   String _monthName(int month) {

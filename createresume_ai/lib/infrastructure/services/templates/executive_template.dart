@@ -18,6 +18,23 @@ class ExecutiveTemplate implements ResumeTemplateBase {
   static const PdfColor _midGrey   = PdfColor.fromInt(0xFF777777);
   static const PdfColor _white     = PdfColors.white;
 
+  /// Replaces Unicode punctuation/symbols that the default PDF font can't
+  /// render (en/em dashes, smart quotes, ellipsis, icon glyphs) with safe
+  /// ASCII equivalents. Without this, unsupported glyphs render as empty
+  /// "tofu" boxes in the generated PDF.
+  static String _sanitize(String text) {
+    return text
+        .replaceAll('\u2013', '-')  // – en dash
+        .replaceAll('\u2014', '-')  // — em dash
+        .replaceAll('\u2018', "'")  // ‘ left single quote
+        .replaceAll('\u2019', "'")  // ’ right single quote
+        .replaceAll('\u201C', '"')  // “ left double quote
+        .replaceAll('\u201D', '"')  // ” right double quote
+        .replaceAll('\u2026', '...') // … ellipsis
+        .replaceAll('\u00A0', ' ')  // non-breaking space
+        .replaceAll('\u2022', '-'); // • bullet
+  }
+
   @override
   Future<pw.Document> generate(ResumeData resume) async {
     final doc = pw.Document();
@@ -37,7 +54,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  resume.fullName,
+                  _sanitize(resume.fullName),
                   style: pw.TextStyle(
                     fontSize: 26,
                     fontWeight: pw.FontWeight.bold,
@@ -48,7 +65,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                 if (resume.jobTitle != null) ...[
                   pw.SizedBox(height: 4),
                   pw.Text(
-                    resume.jobTitle!,
+                    _sanitize(resume.jobTitle!),
                     style: pw.TextStyle(
                       fontSize: 13,
                       color: _gold,
@@ -67,9 +84,9 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                   child: pw.Wrap(
                     spacing: 20,
                     children: [
-                      _headerContact('✉', resume.email),
-                      if (resume.phone != null) _headerContact('✆', resume.phone!),
-                      if (resume.location != null) _headerContact('⌖', resume.location!),
+                      _headerContact('Email:', resume.email),
+                      if (resume.phone != null) _headerContact('Phone:', resume.phone!),
+                      if (resume.location != null) _headerContact('Location:', resume.location!),
                     ],
                   ),
                 ),
@@ -96,7 +113,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                       border: pw.Border(left: pw.BorderSide(color: _gold, width: 3)),
                     ),
                     child: pw.Text(
-                      resume.summary!,
+                      _sanitize(resume.summary!),
                       style: const pw.TextStyle(fontSize: 10, lineSpacing: 1.6, color: _textGrey),
                     ),
                   ),
@@ -123,7 +140,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                   pw.Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: resume.skills.map((s) => _goldChip(s.name)).toList(),
+                    children: resume.skills.map((s) => _goldChip(_sanitize(s.name))).toList(),
                   ),
                   pw.SizedBox(height: 18),
                 ],
@@ -143,13 +160,13 @@ class ExecutiveTemplate implements ResumeTemplateBase {
     return doc;
   }
 
-  pw.Widget _headerContact(String icon, String text) {
+  pw.Widget _headerContact(String label, String text) {
     return pw.Row(
       mainAxisSize: pw.MainAxisSize.min,
       children: [
-        pw.Text(icon, style: const pw.TextStyle(fontSize: 9, color: _gold)),
+        pw.Text(label, style: const pw.TextStyle(fontSize: 9, color: _gold)),
         pw.SizedBox(width: 4),
-        pw.Text(text, style: const pw.TextStyle(fontSize: 9, color: _white)),
+        pw.Text(_sanitize(text), style: const pw.TextStyle(fontSize: 9, color: _white)),
       ],
     );
   }
@@ -192,7 +209,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text(
-                  exp.role,
+                  _sanitize(exp.role),
                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: _navy),
                 ),
                 pw.Container(
@@ -202,7 +219,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                     borderRadius: pw.BorderRadius.circular(10),
                   ),
                   child: pw.Text(
-                    '${_formatDate(exp.startDate)} – ${exp.isCurrent ? 'Present' : _formatDate(exp.endDate)}',
+                    '${_formatDate(exp.startDate)} - ${exp.isCurrent ? 'Present' : _formatDate(exp.endDate)}',
                     style: const pw.TextStyle(fontSize: 8, color: _white),
                   ),
                 ),
@@ -210,7 +227,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
             ),
             pw.SizedBox(height: 2),
             pw.Text(
-              exp.company,
+              _sanitize(exp.company),
               style: pw.TextStyle(fontSize: 10, color: _gold, fontWeight: pw.FontWeight.bold),
             ),
             if (bullets.isNotEmpty) ...[
@@ -221,10 +238,10 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                   child: pw.Row(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('▸  ', style: pw.TextStyle(fontSize: 8.5, color: _gold)),
+                      pw.Text('- ', style: pw.TextStyle(fontSize: 8.5, color: _gold)),
                       pw.Expanded(
                         child: pw.Text(
-                          line.replaceAll(RegExp(r'^[•\-\*▸]\s*'), ''),
+                          _sanitize(line.replaceAll(RegExp(r'^[•\-\*▸]\s*'), '')),
                           style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.45, color: _textGrey),
                         ),
                       ),
@@ -255,12 +272,12 @@ class ExecutiveTemplate implements ResumeTemplateBase {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  edu.degree,
+                  _sanitize(edu.degree),
                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: _navy),
                 ),
-                pw.Text(edu.field, style: const pw.TextStyle(fontSize: 10, color: _textGrey)),
+                pw.Text(_sanitize(edu.field), style: const pw.TextStyle(fontSize: 10, color: _textGrey)),
                 pw.Text(
-                  edu.institution,
+                  _sanitize(edu.institution),
                   style: pw.TextStyle(fontSize: 10, color: _gold, fontWeight: pw.FontWeight.bold),
                 ),
               ],
@@ -270,7 +287,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
               children: [
                 if (edu.endDate != null)
                   pw.Text(
-                    '${edu.startDate.year} – ${edu.endDate!.year}',
+                    '${edu.startDate.year} - ${edu.endDate!.year}',
                     style: const pw.TextStyle(fontSize: 9.5, color: _midGrey),
                   ),
                 if (edu.gpa != null)
@@ -319,9 +336,9 @@ class ExecutiveTemplate implements ResumeTemplateBase {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text(proj.name, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _navy)),
+                pw.Text(_sanitize(proj.name), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _navy)),
                 if (proj.url != null && proj.url!.isNotEmpty)
-                  pw.Text(proj.url!, style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
+                  pw.Text(_sanitize(proj.url!), style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
               ],
             ),
             if (proj.techStack.isNotEmpty) ...[
@@ -331,14 +348,14 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                 children: proj.techStack.map((t) => pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: pw.BoxDecoration(color: _navy, borderRadius: pw.BorderRadius.circular(3)),
-                  child: pw.Text(t, style: const pw.TextStyle(fontSize: 7.5, color: _white)),
+                  child: pw.Text(_sanitize(t), style: const pw.TextStyle(fontSize: 7.5, color: _white)),
                 )).toList(),
               ),
             ],
             if (proj.description.isNotEmpty) ...[
               pw.SizedBox(height: 4),
               pw.Text(
-                proj.description,
+                _sanitize(proj.description),
                 style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _textGrey),
               ),
             ],

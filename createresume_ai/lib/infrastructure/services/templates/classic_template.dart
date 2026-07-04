@@ -15,6 +15,23 @@ class ClassicTemplate implements ResumeTemplateBase {
   static const PdfColor _midGrey    = PdfColor.fromInt(0xFF666666);
   static const PdfColor _divider    = PdfColor.fromInt(0xFF222222);
 
+  /// Replaces Unicode punctuation that the default PDF font can't render
+  /// (en/em dashes, smart quotes, bullets, ellipsis, non-breaking spaces)
+  /// with safe ASCII equivalents. Without this, unsupported glyphs render
+  /// as empty "tofu" boxes in the generated PDF.
+  static String _sanitize(String text) {
+    return text
+        .replaceAll('\u2013', '-')  // – en dash
+        .replaceAll('\u2014', '-')  // — em dash
+        .replaceAll('\u2018', "'")  // ‘ left single quote
+        .replaceAll('\u2019', "'")  // ’ right single quote
+        .replaceAll('\u201C', '"')  // “ left double quote
+        .replaceAll('\u201D', '"')  // ” right double quote
+        .replaceAll('\u2026', '...') // … ellipsis
+        .replaceAll('\u00A0', ' ')  // non-breaking space
+        .replaceAll('\u2022', '-'); // • bullet (we render our own bullets separately)
+  }
+
   @override
   Future<pw.Document> generate(ResumeData resume) async {
     final doc = pw.Document();
@@ -30,7 +47,7 @@ class ClassicTemplate implements ResumeTemplateBase {
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               pw.Text(
-                _toSmallCaps(resume.fullName),
+                _toSmallCaps(_sanitize(resume.fullName)),
                 textAlign: pw.TextAlign.center,
                 style: pw.TextStyle(
                   fontSize: 22,
@@ -41,7 +58,7 @@ class ClassicTemplate implements ResumeTemplateBase {
               ),
               pw.SizedBox(height: 5),
               pw.Text(
-                _buildContactLine(resume),
+                _sanitize(_buildContactLine(resume)),
                 textAlign: pw.TextAlign.center,
                 style: const pw.TextStyle(fontSize: 9, color: _midGrey),
               ),
@@ -55,7 +72,7 @@ class ClassicTemplate implements ResumeTemplateBase {
             pw.SizedBox(height: 10),
             _sectionHeader('PROFESSIONAL SUMMARY'),
             pw.Text(
-              resume.summary!,
+              _sanitize(resume.summary!),
               style: const pw.TextStyle(fontSize: 10, lineSpacing: 1.5, color: _darkGrey),
             ),
             pw.SizedBox(height: 10),
@@ -142,7 +159,7 @@ class ClassicTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                exp.company,
+                _sanitize(exp.company),
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
                   fontSize: 10.5,
@@ -157,7 +174,7 @@ class ClassicTemplate implements ResumeTemplateBase {
           ),
           // Role
           pw.Text(
-            exp.role,
+            _sanitize(exp.role),
             style: pw.TextStyle(
               fontSize: 10,
               fontWeight: pw.FontWeight.bold,
@@ -176,7 +193,7 @@ class ClassicTemplate implements ResumeTemplateBase {
                   pw.Text('• ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
                   pw.Expanded(
                     child: pw.Text(
-                      line.replaceAll(RegExp(r'^[•\-\*]\s*'), ''),
+                      _sanitize(line.replaceAll(RegExp(r'^[•\-\*]\s*'), '')),
                       style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _darkGrey),
                     ),
                   ),
@@ -199,7 +216,7 @@ class ClassicTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                edu.institution,
+                _sanitize(edu.institution),
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
                   fontSize: 10.5,
@@ -215,7 +232,7 @@ class ClassicTemplate implements ResumeTemplateBase {
             ],
           ),
           pw.Text(
-            '${edu.degree} in ${edu.field}',
+            _sanitize('${edu.degree} in ${edu.field}'),
             style: const pw.TextStyle(fontSize: 10, color: _darkGrey),
           ),
           if (edu.gpa != null)
@@ -244,7 +261,7 @@ class ClassicTemplate implements ResumeTemplateBase {
                   children: [
                     pw.Text('• ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
                     pw.Expanded(
-                      child: pw.Text(s.name, style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
+                      child: pw.Text(_sanitize(s.name), style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
                     ),
                   ],
                 ),
@@ -267,14 +284,14 @@ class ClassicTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                proj.name,
+                _sanitize(proj.name),
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _black),
               ),
             ],
           ),
           if (proj.techStack.isNotEmpty)
             pw.Text(
-              proj.techStack.join(', '),
+              _sanitize(proj.techStack.join(', ')),
               style: pw.TextStyle(fontSize: 9.5, color: _darkGrey, fontStyle: pw.FontStyle.italic),
             ),
           if (proj.description.isNotEmpty)
@@ -285,7 +302,7 @@ class ClassicTemplate implements ResumeTemplateBase {
                 children: [
                   pw.Text('• ', style: const pw.TextStyle(fontSize: 9.5)),
                   pw.Expanded(
-                    child: pw.Text(proj.description, style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _darkGrey)),
+                    child: pw.Text(_sanitize(proj.description), style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _darkGrey)),
                   ),
                 ],
               ),
@@ -297,6 +314,6 @@ class ClassicTemplate implements ResumeTemplateBase {
 
   String _formatDateRange(DateTime start, DateTime? end, bool isCurrent) {
     final endStr = isCurrent ? 'Present' : (end != null ? '${end.year}' : '');
-    return '${start.year} – $endStr';
+    return '${start.year} - $endStr';
   }
 }

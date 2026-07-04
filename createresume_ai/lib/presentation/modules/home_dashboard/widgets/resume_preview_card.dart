@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/resume.dart';
+import '../providers/home_dashboard_notifier.dart';
 
-class ResumePreviewCard extends StatelessWidget {
+class ResumePreviewCard extends ConsumerWidget {
   final Resume resume;
   final VoidCallback onTap;
 
@@ -15,7 +18,7 @@ class ResumePreviewCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     // Format relative time (e.g., "Oct 24, 2023")
@@ -43,7 +46,7 @@ class ResumePreviewCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header row: Score badge and icon
+              // Header row: Score badge and menu
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -76,10 +79,76 @@ class ResumePreviewCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.more_vert_rounded,
-                    color: theme.colorScheme.onSurfaceVariant,
-                    size: 20,
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert_rounded,
+                      color: theme.colorScheme.onSurfaceVariant,
+                      size: 20,
+                    ),
+                    onSelected: (value) async {
+                      if (value == 'delete') {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete Resume'),
+                            content: Text(
+                              'Are you sure you want to delete "${resume.title}"?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.error,
+                                ),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        
+                        if (confirmed == true && context.mounted) {
+                          final deleteResume = ref.read(deleteResumeUseCaseProvider);
+                          final result = await deleteResume(resumeId: resume.id);
+                          
+                          result.fold(
+                            (failure) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to delete: ${failure.toString()}'),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            },
+                            (_) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Resume deleted successfully'),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                              // Refresh the dashboard
+                              ref.read(homeDashboardProvider.notifier).refresh();
+                            },
+                          );
+                        }
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_rounded, size: 18),
+                            SizedBox(width: 8),
+                            Text('Delete'),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

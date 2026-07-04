@@ -57,12 +57,8 @@ class ScaffoldWithNavBar extends ConsumerWidget {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
           NavigationDestination(
-            icon: Icon(Icons.analytics_rounded),
-            label: 'Analyzer',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.view_kanban_rounded),
-            label: 'Tracker',
+            icon: Icon(Icons.folder_rounded),
+            label: 'Resumes',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_rounded),

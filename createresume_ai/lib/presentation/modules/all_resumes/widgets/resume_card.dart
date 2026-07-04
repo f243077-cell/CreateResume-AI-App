@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/resume.dart';
+import '../providers/all_resumes_notifier.dart';
 
-class ResumeCard extends StatelessWidget {
+class ResumeCard extends ConsumerWidget {
   final Resume resume;
   final VoidCallback onTap;
 
@@ -14,7 +17,7 @@ class ResumeCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     
     return Card(
@@ -72,9 +75,75 @@ class ResumeCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textTertiary,
+              PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: AppColors.textTertiary,
+                ),
+                onSelected: (value) async {
+                  if (value == 'delete') {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Resume'),
+                        content: Text(
+                          'Are you sure you want to delete "${resume.title}"?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                            ),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+                    
+                    if (confirmed == true && context.mounted) {
+                      final deleteResume = ref.read(deleteResumeUseCaseProvider);
+                      final result = await deleteResume(resumeId: resume.id);
+                      
+                      result.fold(
+                        (failure) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to delete: ${failure.toString()}'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        },
+                        (_) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Resume deleted successfully'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                          // Refresh the resumes list
+                          ref.read(allResumesProvider.notifier).refresh();
+                        },
+                      );
+                    }
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Delete'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

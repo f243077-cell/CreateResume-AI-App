@@ -5,14 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'application/providers/auth_state_provider.dart';
 import 'core/routing/app_routes.dart';
 import 'presentation/modules/all_resumes/screens/all_resumes_screen.dart';
-import 'presentation/modules/application_tracker/screens/application_tracker_screen.dart';
 import 'presentation/modules/authentication/forgot_password_screen.dart';
 import 'presentation/modules/authentication/login_screen.dart';
 import 'presentation/modules/authentication/signup_screen.dart';
 import 'presentation/modules/home_dashboard/screens/home_dashboard_screen.dart';
 import 'presentation/modules/onboarding/onboarding_screen.dart';
-import 'presentation/modules/resume_analyzer/screens/resume_analyzer_screen.dart';
-import 'presentation/modules/resume_analyzer/screens/resume_picker_screen.dart';
 import 'presentation/modules/resume_editor/screens/resume_editor_screen.dart';
 import 'presentation/modules/resume_wizard/screens/resume_wizard_screen.dart';
 import 'presentation/modules/subscription/screens/subscription_screen.dart';
@@ -56,9 +53,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       return null;
     },
-    errorBuilder: (context, state) => const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    ),
+    errorBuilder: (context, state) =>
+        const Scaffold(body: Center(child: CircularProgressIndicator())),
     routes: [
       GoRoute(
         path: AppRoutes.onboarding,
@@ -84,11 +80,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.resumeWizard,
         name: AppRouteNames.resumeWizard,
         builder: (context, state) => const ResumeWizardScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.allResumes,
-        name: AppRouteNames.allResumes,
-        builder: (context, state) => const AllResumesScreen(),
       ),
       GoRoute(
         path: '${AppRoutes.templateSelection}/:resumeId',
@@ -128,28 +119,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppRoutes.resumeAnalyzer,
-                name: AppRouteNames.resumeAnalyzer,
-                builder: (context, state) => const ResumePickerScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':resumeId',
-                    name: AppRouteNames.resumeAnalyzerDetail,
-                    builder: (context, state) {
-                      final resumeId = state.pathParameters['resumeId']!;
-                      return ResumeAnalyzerScreen(resumeId: resumeId);
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.applicationTracker,
-                name: AppRouteNames.applicationTracker,
-                builder: (context, state) => const ApplicationTrackerScreen(),
+                path: AppRoutes.allResumes,
+                name: AppRouteNames.allResumes,
+                builder: (context, state) => const AllResumesScreen(),
               ),
             ],
           ),
