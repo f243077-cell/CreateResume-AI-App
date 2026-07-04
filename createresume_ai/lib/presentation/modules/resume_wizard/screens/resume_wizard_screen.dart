@@ -37,8 +37,9 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
   }
 
   void _nextPage() {
-    final currentIndex =
-        ref.read(resumeWizardProvider.select((s) => s.currentPageIndex));
+    final currentIndex = ref.read(
+      resumeWizardProvider.select((s) => s.currentPageIndex),
+    );
     if (currentIndex < _totalPages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -50,8 +51,9 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
   }
 
   void _previousPage() {
-    final currentIndex =
-        ref.read(resumeWizardProvider.select((s) => s.currentPageIndex));
+    final currentIndex = ref.read(
+      resumeWizardProvider.select((s) => s.currentPageIndex),
+    );
     if (currentIndex > 0) {
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
@@ -61,23 +63,27 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
   }
 
   Future<void> _submit() async {
-    final careerStage =
-        ref.read(resumeWizardProvider.select((s) => s.careerStage));
+    final careerStage = ref.read(
+      resumeWizardProvider.select((s) => s.careerStage),
+    );
 
     // Call the new AI generation provider
-    ref.read(resumeGenerationProvider.notifier).generateResume(
-      description: _descriptionController.text,
-      careerStage: careerStage?.name ?? 'entry-level',
-      jobTitle: _titleController.text,
-      templateId: null, // Will be selected after generation
-    );
+    ref
+        .read(resumeGenerationProvider.notifier)
+        .generateResume(
+          description: _descriptionController.text,
+          careerStage: careerStage?.name ?? 'entry-level',
+          jobTitle: _titleController.text,
+          templateId: null, // Will be selected after generation
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final currentIndex =
-        ref.watch(resumeWizardProvider.select((s) => s.currentPageIndex));
+    final currentIndex = ref.watch(
+      resumeWizardProvider.select((s) => s.currentPageIndex),
+    );
 
     // Handle errors via listener
     ref.listen<ResumeWizardState>(resumeWizardProvider, (prev, next) {
@@ -147,7 +153,8 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
                 Expanded(
                   child: PageView(
                     controller: _pageController,
-                    physics: const NeverScrollableScrollPhysics(), // Force buttons to navigate
+                    physics:
+                        const NeverScrollableScrollPhysics(), // Force buttons to navigate
                     onPageChanged: (index) => ref
                         .read(resumeWizardProvider.notifier)
                         .setPageIndex(index),
@@ -177,8 +184,9 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
   }
 
   Widget _buildCareerStageStep(ThemeData theme) {
-    final selectedStage =
-        ref.watch(resumeWizardProvider.select((s) => s.careerStage));
+    final selectedStage = ref.watch(
+      resumeWizardProvider.select((s) => s.careerStage),
+    );
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -203,16 +211,22 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
                 label: 'Select ${stage.displayLabel} career stage',
                 child: InkWell(
                   onTap: () {
-                    ref.read(resumeWizardProvider.notifier).updateCareerStage(stage);
+                    ref
+                        .read(resumeWizardProvider.notifier)
+                        .updateCareerStage(stage);
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.blue100 : theme.colorScheme.surface,
+                      color: isSelected
+                          ? AppColors.blue100
+                          : theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isSelected ? AppColors.blue400 : AppColors.border,
+                        color: isSelected
+                            ? AppColors.blue400
+                            : AppColors.border,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -220,14 +234,20 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
                       children: [
                         Icon(
                           Icons.work_history_rounded,
-                          color: isSelected ? AppColors.navy800 : AppColors.textSecondary,
+                          color: isSelected
+                              ? AppColors.navy800
+                              : AppColors.textSecondary,
                         ),
                         const SizedBox(width: 16),
                         Text(
                           stage.displayLabel,
                           style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? AppColors.navy800 : theme.textTheme.bodyMedium?.color,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? AppColors.navy800
+                                : theme.textTheme.bodyMedium?.color,
                           ),
                         ),
                       ],
@@ -315,10 +335,7 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            "Tell us about yourself",
-            style: theme.textTheme.headlineSmall,
-          ),
+          Text("Tell us about yourself", style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
             "Describe your experience, skills, education — the more detail the better. AI will build your full resume from this.",
@@ -329,7 +346,8 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
             controller: _descriptionController,
             maxLines: 12,
             decoration: InputDecoration(
-              hintText: 'Example: I am a software engineer with 5 years of experience building web applications using React and Node.js. I have a Bachelor\'s degree in Computer Science and have worked at two tech companies. My skills include JavaScript, TypeScript, Python, and cloud services like AWS...',
+              hintText:
+                  'Example: I am a software engineer with 5 years of experience building web applications using React and Node.js. I have a Bachelor\'s degree in Computer Science and have worked at two tech companies. My skills include JavaScript, TypeScript, Python, and cloud services like AWS...',
               alignLabelWithHint: true,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -410,16 +428,13 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
             SizedBox(
               width: 200,
               height: 120,
-              child: ShimmerSkeleton(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              child: ShimmerSkeleton(borderRadius: BorderRadius.circular(8)),
             ),
           ],
         ),
       ),
     );
   }
-
 }
 
 class _WizardBottomControls extends ConsumerWidget {
@@ -438,10 +453,12 @@ class _WizardBottomControls extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final currentIndex =
-        ref.watch(resumeWizardProvider.select((s) => s.currentPageIndex));
-    final isLoading =
-        ref.watch(resumeWizardProvider.select((s) => s.isLoading));
+    final currentIndex = ref.watch(
+      resumeWizardProvider.select((s) => s.currentPageIndex),
+    );
+    final isLoading = ref.watch(
+      resumeWizardProvider.select((s) => s.isLoading),
+    );
     final isGenerating = ref.watch(resumeGenerationProvider).isLoading;
 
     // Check if description has minimum 100 characters on the last step
@@ -464,6 +481,9 @@ class _WizardBottomControls extends ConsumerWidget {
                 onPressed: (isLoading || isGenerating) ? null : onPrevious,
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(80, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(26),
+                  ),
                 ),
                 child: const Text('Back'),
               ),
@@ -473,7 +493,9 @@ class _WizardBottomControls extends ConsumerWidget {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: (isLoading || isGenerating || !canProceed) ? null : onNext,
+              onPressed: (isLoading || isGenerating || !canProceed)
+                  ? null
+                  : onNext,
               icon: (isLoading || isGenerating)
                   ? const SizedBox(
                       width: 20,
@@ -484,14 +506,17 @@ class _WizardBottomControls extends ConsumerWidget {
                       ),
                     )
                   : Icon(
-                      isLastStep ? Icons.auto_awesome_rounded : Icons.arrow_forward_rounded,
+                      isLastStep
+                          ? Icons.auto_awesome_rounded
+                          : Icons.arrow_forward_rounded,
                       size: 20,
                     ),
-              label: Text(
-                isLastStep ? 'Generate Resume' : 'Next',
-              ),
+              label: Text(isLastStep ? 'Generate Resume' : 'Next'),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(120, 52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(26),
+                ),
                 backgroundColor: isLastStep ? AppColors.gold : null,
                 foregroundColor: isLastStep ? AppColors.navy800 : null,
               ),

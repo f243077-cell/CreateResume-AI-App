@@ -16,7 +16,7 @@ ThemeData buildAppDarkTheme() {
 
 ThemeData _buildTheme(Brightness brightness) {
   final isDark = brightness == Brightness.dark;
-  
+
   final colorScheme = ColorScheme.fromSeed(
     seedColor: AppColors.navy800,
     primary: AppColors.navy800,
@@ -27,7 +27,9 @@ ThemeData _buildTheme(Brightness brightness) {
     error: AppColors.error,
     surface: isDark ? AppColors.navy900 : AppColors.surfaceLight,
     onSurface: isDark ? AppColors.white : AppColors.textPrimary,
-    surfaceContainerHighest: isDark ? const Color(0xFF1E293B) : AppColors.surfaceCard,
+    surfaceContainerHighest: isDark
+        ? const Color(0xFF1E293B)
+        : AppColors.surfaceCard,
     outline: isDark ? const Color(0xFF334155) : AppColors.border,
     brightness: brightness,
   );
@@ -57,13 +59,13 @@ ThemeData _buildTheme(Brightness brightness) {
       color: isDark ? AppColors.white : AppColors.textPrimary,
       height: 1.3,
     ),
-    titleMedium: GoogleFonts.lora(
+    titleMedium: GoogleFonts.josefinSans(
       fontSize: 18,
       fontWeight: FontWeight.w700,
       color: isDark ? AppColors.white : AppColors.textPrimary,
       height: 1.4,
     ),
-    titleSmall: GoogleFonts.lora(
+    titleSmall: GoogleFonts.josefinSans(
       fontSize: 16,
       fontWeight: FontWeight.w600,
       color: isDark ? AppColors.white : AppColors.textPrimary,
@@ -111,7 +113,9 @@ ThemeData _buildTheme(Brightness brightness) {
     useMaterial3: true,
     colorScheme: colorScheme,
     textTheme: textTheme,
-    scaffoldBackgroundColor: isDark ? AppColors.navy900 : AppColors.surfaceLight,
+    scaffoldBackgroundColor: isDark
+        ? AppColors.navy900
+        : AppColors.surfaceLight,
     pageTransitionsTheme: PageTransitionsTheme(
       builders: {
         TargetPlatform.android: const FadeUpwardsPageTransitionsBuilder(),
@@ -133,7 +137,10 @@ ThemeData _buildTheme(Brightness brightness) {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: isDark ? const Color(0xFF334155) : AppColors.border, width: 1),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF334155) : AppColors.border,
+          width: 1,
+        ),
       ),
       margin: EdgeInsets.zero,
     ),
@@ -157,7 +164,9 @@ ThemeData _buildTheme(Brightness brightness) {
         foregroundColor: isDark ? AppColors.white : AppColors.navy800,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(color: isDark ? const Color(0xFF334155) : AppColors.border),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF334155) : AppColors.border,
+        ),
         textStyle: GoogleFonts.josefinSans(
           fontSize: 16,
           fontWeight: FontWeight.w600,
@@ -181,11 +190,15 @@ ThemeData _buildTheme(Brightness brightness) {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : AppColors.border),
+        borderSide: BorderSide(
+          color: isDark ? const Color(0xFF334155) : AppColors.border,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : AppColors.border),
+        borderSide: BorderSide(
+          color: isDark ? const Color(0xFF334155) : AppColors.border,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -199,7 +212,10 @@ ThemeData _buildTheme(Brightness brightness) {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppColors.error, width: 2),
       ),
-      hintStyle: GoogleFonts.lora(fontSize: 14, color: isDark ? AppColors.white54 : AppColors.textTertiary),
+      hintStyle: GoogleFonts.lora(
+        fontSize: 14,
+        color: isDark ? AppColors.white54 : AppColors.textTertiary,
+      ),
       labelStyle: GoogleFonts.josefinSans(
         fontSize: 14,
         fontWeight: FontWeight.w500,
@@ -266,7 +282,10 @@ ThemeData _buildTheme(Brightness brightness) {
         if (states.contains(WidgetState.selected)) {
           return const IconThemeData(color: AppColors.navy800, size: 24);
         }
-        return IconThemeData(color: isDark ? AppColors.white54 : AppColors.textTertiary, size: 24);
+        return IconThemeData(
+          color: isDark ? AppColors.white54 : AppColors.textTertiary,
+          size: 24,
+        );
       }),
     ),
   );
