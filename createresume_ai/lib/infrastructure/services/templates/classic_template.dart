@@ -23,10 +23,10 @@ class ClassicTemplate implements ResumeTemplateBase {
     return text
         .replaceAll('\u2013', '-')  // – en dash
         .replaceAll('\u2014', '-')  // — em dash
-        .replaceAll('\u2018', "'")  // ‘ left single quote
-        .replaceAll('\u2019', "'")  // ’ right single quote
-        .replaceAll('\u201C', '"')  // “ left double quote
-        .replaceAll('\u201D', '"')  // ” right double quote
+        .replaceAll('\u2018', "'")  // ' left single quote
+        .replaceAll('\u2019', "'")  // ' right single quote
+        .replaceAll('\u201C', '"')  // " left double quote
+        .replaceAll('\u201D', '"')  // " right double quote
         .replaceAll('\u2026', '...') // … ellipsis
         .replaceAll('\u00A0', ' ')  // non-breaking space
         .replaceAll('\u2022', '-'); // • bullet (we render our own bullets separately)
@@ -116,7 +116,7 @@ class ClassicTemplate implements ResumeTemplateBase {
     if (resume.location != null) parts.add(resume.location!);
     parts.add(resume.email);
     if (resume.phone != null) parts.add(resume.phone!);
-    return parts.join('  •  ');
+    return parts.join('  -  ');
   }
 
   pw.Widget _sectionHeader(String title) {
@@ -190,7 +190,7 @@ class ClassicTemplate implements ResumeTemplateBase {
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('• ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
+                  pw.Text('- ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
                   pw.Expanded(
                     child: pw.Text(
                       _sanitize(line.replaceAll(RegExp(r'^[•\-\*]\s*'), '')),
@@ -259,7 +259,7 @@ class ClassicTemplate implements ResumeTemplateBase {
                 child: pw.Row(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('• ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
+                    pw.Text('- ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
                     pw.Expanded(
                       child: pw.Text(_sanitize(s.name), style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
                     ),
@@ -300,7 +300,7 @@ class ClassicTemplate implements ResumeTemplateBase {
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('• ', style: const pw.TextStyle(fontSize: 9.5)),
+                  pw.Text('- ', style: const pw.TextStyle(fontSize: 9.5)),
                   pw.Expanded(
                     child: pw.Text(_sanitize(proj.description), style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _darkGrey)),
                   ),
