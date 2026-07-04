@@ -127,11 +127,8 @@ coverage/
 !.env.example
 *.env.local
 
-# Supabase
-supabase/.temp/
-supabase/.branches/
-**/supabase/functions/**/node_modules/
-**/supabase/functions/**/.env
+# Supabase — exclude the entire folder from version control
+supabase/
 
 # Node (for Supabase Edge Functions written in TS)
 node_modules/
