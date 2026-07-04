@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/routing/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/resume.dart';
-import '../../../widgets/shimmer_skeleton.dart';
 import '../providers/all_resumes_notifier.dart';
 import '../widgets/resume_card.dart';
 
@@ -19,10 +18,7 @@ class AllResumesScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('All Resumes'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('All Resumes'), centerTitle: true),
       body: resumesAsync.when(
         loading: () => _buildLoading(),
         error: (error, stack) => _buildError(context, ref, error.toString()),
@@ -38,9 +34,7 @@ class AllResumesScreen extends ConsumerWidget {
   }
 
   Widget _buildLoading() {
-    return const Center(
-      child: CircularProgressIndicator(),
-    );
+    return const Center(child: CircularProgressIndicator());
   }
 
   Widget _buildError(BuildContext context, WidgetRef ref, String error) {
@@ -65,7 +59,12 @@ class AllResumesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, WidgetRef ref, ThemeData theme, List<Resume> resumes) {
+  Widget _buildContent(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    List<Resume> resumes,
+  ) {
     if (resumes.isEmpty) {
       return Center(
         child: Padding(
