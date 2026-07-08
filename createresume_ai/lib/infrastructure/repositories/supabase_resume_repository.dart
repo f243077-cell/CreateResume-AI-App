@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 
 import '../../core/errors/failures.dart';
 import '../../domain/entities/education.dart';
+import '../../domain/entities/honor.dart';
 import '../../domain/entities/project.dart';
 import '../../domain/entities/resume.dart';
 import '../../domain/entities/skill.dart';
@@ -28,7 +29,8 @@ class SupabaseResumeRepository implements IResumeRepository {
             work_experiences(*),
             educations(*),
             skills(*),
-            projects(*)
+            projects(*),
+            honors(*)
           ''')
           .eq('user_id', userId)
           .order('updated_at', ascending: false);
@@ -53,7 +55,8 @@ class SupabaseResumeRepository implements IResumeRepository {
             work_experiences(*),
             educations(*),
             skills(*),
-            projects(*)
+            projects(*),
+            honors(*)
           ''')
           .eq('id', id)
           .single();
@@ -74,6 +77,7 @@ class SupabaseResumeRepository implements IResumeRepository {
             'user_id': resume.userId,
             'title': resume.title,
             'template_id': resume.templateId,
+            'summary': resume.summary,
             'ats_score': resume.atsScore,
             'is_published': resume.isPublished,
           })
@@ -90,6 +94,7 @@ class SupabaseResumeRepository implements IResumeRepository {
         userId: resume.userId,
         title: resume.title,
         templateId: resume.templateId,
+        summary: resume.summary,
         atsScore: resume.atsScore,
         isPublished: resume.isPublished,
         createdAt: resume.createdAt,
@@ -131,6 +136,7 @@ class SupabaseResumeRepository implements IResumeRepository {
                 resumeId: savedResumeId,
                 name: s.name,
                 level: s.level,
+                category: s.category,
                 orderIndex: s.orderIndex,
               ),
             )
@@ -145,6 +151,18 @@ class SupabaseResumeRepository implements IResumeRepository {
                 techStack: p.techStack,
                 url: p.url,
                 orderIndex: p.orderIndex,
+              ),
+            )
+            .toList(),
+        honors: resume.honors
+            .map(
+              (h) => Honor(
+                id: h.id,
+                resumeId: savedResumeId,
+                title: h.title,
+                description: h.description,
+                certificateUrl: h.certificateUrl,
+                orderIndex: h.orderIndex,
               ),
             )
             .toList(),
@@ -168,6 +186,7 @@ class SupabaseResumeRepository implements IResumeRepository {
           .update({
             'title': resume.title,
             'template_id': resume.templateId,
+            'summary': resume.summary,
             'ats_score': resume.atsScore,
             'is_published': resume.isPublished,
             'updated_at': DateTime.now().toUtc().toIso8601String(),
@@ -216,6 +235,7 @@ class SupabaseResumeRepository implements IResumeRepository {
       userId: data['user_id'] as String,
       title: data['title'] as String,
       templateId: data['template_id'] as String?,
+      summary: data['summary'] as String?,
       atsScore: data['ats_score'] as int?,
       isPublished: data['is_published'] as bool? ?? false,
       createdAt: DateTime.parse(data['created_at'] as String),
@@ -224,6 +244,7 @@ class SupabaseResumeRepository implements IResumeRepository {
       educations: _mapList(data['educations'], _mapEducation),
       skills: _mapList(data['skills'], _mapSkill),
       projects: _mapList(data['projects'], _mapProject),
+      honors: _mapList(data['honors'], _mapHonor),
     );
   }
 
@@ -267,6 +288,7 @@ class SupabaseResumeRepository implements IResumeRepository {
     resumeId: m['resume_id'] as String,
     name: m['name'] as String,
     level: m['level'] as String?,
+    category: m['category'] as String?,
     orderIndex: m['order_index'] as int? ?? 0,
   );
 
@@ -279,6 +301,15 @@ class SupabaseResumeRepository implements IResumeRepository {
         ? List<String>.from(m['tech_stack'] as List)
         : [],
     url: m['url'] as String?,
+    orderIndex: m['order_index'] as int? ?? 0,
+  );
+
+  Honor _mapHonor(Map<String, dynamic> m) => Honor(
+    id: m['id'] as String,
+    resumeId: m['resume_id'] as String,
+    title: m['title'] as String,
+    description: m['description'] as String?,
+    certificateUrl: m['certificate_url'] as String?,
     orderIndex: m['order_index'] as int? ?? 0,
   );
 
@@ -340,6 +371,7 @@ class SupabaseResumeRepository implements IResumeRepository {
                     'resume_id': s.resumeId,
                     'name': s.name,
                     'level': s.level,
+                    'category': s.category,
                     'order_index': s.orderIndex,
                   },
                 )
@@ -366,6 +398,25 @@ class SupabaseResumeRepository implements IResumeRepository {
                 .toList(),
           );
     }
+
+    if (resume.honors.isNotEmpty) {
+      await _db
+          .from('honors')
+          .insert(
+            resume.honors
+                .map(
+                  (h) => {
+                    'id': h.id,
+                    'resume_id': h.resumeId,
+                    'title': h.title,
+                    'description': h.description,
+                    'certificate_url': h.certificateUrl,
+                    'order_index': h.orderIndex,
+                  },
+                )
+                .toList(),
+          );
+    }
   }
 
   Future<void> _deleteChildren(String resumeId) async {
@@ -374,6 +425,7 @@ class SupabaseResumeRepository implements IResumeRepository {
       _db.from('educations').delete().eq('resume_id', resumeId),
       _db.from('skills').delete().eq('resume_id', resumeId),
       _db.from('projects').delete().eq('resume_id', resumeId),
+      _db.from('honors').delete().eq('resume_id', resumeId),
     ]);
   }
 }

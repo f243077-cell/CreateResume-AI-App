@@ -51,23 +51,24 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+const systemPrompt = `You are a professional resume writer creating a detailed, ATS-optimized resume. Return ONLY a valid JSON object with NO markdown, NO code blocks, NO extra text. Be thorough and specific throughout — avoid short, generic, or vague content in every section. Base all details on what the user's description implies; do not invent facts, employers, numbers, or achievements that aren't reasonably supported by their input. Where the user's description doesn't give enough detail for a rich answer, expand using reasonable, clearly-scoped professional phrasing (responsibilities, tools, scope of work) rather than inventing specific metrics that weren't mentioned.
 
-    const systemPrompt = `You are a professional resume writer. Based on the user description provided, generate a complete, ATS-optimized resume. Return ONLY a valid JSON object with NO markdown, NO code blocks, NO extra text. The JSON must have exactly this structure:
+The JSON must have exactly this structure:
 {
   fullName: string,
   jobTitle: string,
   email: string (extract from description or use placeholder),
   phone: string (extract or use placeholder),
   location: string (extract or use placeholder),
-  summary: string (3-4 sentences, professional, ATS-optimized),
-  skills: [{ name: string, level: 'beginner'|'intermediate'|'expert' }] (8-12 skills),
+  summary: string (4-6 sentences, professional and detailed — cover years of experience, core technical strengths, domain expertise, and what makes this candidate stand out; ATS-optimized with relevant keywords),
+  skills: [{ name: string, level: 'beginner'|'intermediate'|'expert', category: string (group name like 'Languages', 'Backend & Distributed Systems', 'Databases & Caching', 'DevOps & Infrastructure', 'Tools & Frameworks' — choose categories that fit; be comprehensive, 12-18 skills total spread across 4-6 categories, inferring reasonable related tools/technologies commonly used alongside what the user mentioned) }],
   workExperiences: [{
     company: string,
     role: string,
     startDate: string,
     endDate: string,
     isCurrently: boolean,
-    description: string (3-4 bullet points as single string, each starting with action verb)
+    description: string (5-7 detailed bullet points as a single string separated by newlines, each starting with a strong action verb; describe the specific systems, scale, technologies, and responsibilities involved; include a quantified result — metrics, percentage, dollar amount, scale, or time saved — ONLY where the user's description reasonably supports one; otherwise focus on technical depth and scope rather than fabricating a number)
   }],
   educations: [{
     institution: string,
@@ -79,10 +80,11 @@ Deno.serve(async (req) => {
   }],
   projects: [{
     name: string,
-    description: string,
-    techStack: [string],
+    description: string (3-4 detailed bullet points as a single string separated by newlines, each starting with an action verb; explain the architecture, technologies, and specific technical decisions involved, and the outcome or purpose of the project),
+    techStack: [string] (5-8 relevant technologies),
     url: string
-  }]
+  }],
+  honors: [{ title: string, description: string, certificateUrl: string }] (0-4 honors/awards/certifications if the description mentions any achievements, competitions, hackathons, or recognitions — otherwise return an empty array)
 }`
 
     const userPrompt = `Career Stage: ${careerStage}\nTarget Job Title: ${jobTitle}\n\nUser Description:\n${description}\n\nGenerate a complete resume based on this information.`
@@ -100,24 +102,37 @@ Deno.serve(async (req) => {
     let lastError = ''
 
     for (const model of modelsToTry) {
-      const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openRouterApiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://createresume.ai',
-          'X-Title': 'CreateResume AI',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 4000,
-        }),
-      })
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 20000) // 20s per model
+
+      let openRouterResponse
+      try {
+        openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openRouterApiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://createresume.ai',
+            'X-Title': 'CreateResume AI',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 4000,
+          }),
+          signal: controller.signal,
+        })
+      } catch (err) {
+        clearTimeout(timeoutId)
+        lastError = err instanceof Error ? err.message : String(err)
+        console.error(`Model "${model}" request failed/timed out:`, lastError)
+        continue
+      }
+      clearTimeout(timeoutId)
 
       if (openRouterResponse.ok) {
         openRouterData = await openRouterResponse.json()
@@ -127,7 +142,6 @@ Deno.serve(async (req) => {
 
       lastError = await openRouterResponse.text()
       console.error(`Model "${model}" failed:`, lastError)
-      // Loop continues to the next model in the list.
     }
 
     if (!openRouterData) {

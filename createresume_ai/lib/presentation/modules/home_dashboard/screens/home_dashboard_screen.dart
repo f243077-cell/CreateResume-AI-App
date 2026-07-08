@@ -7,7 +7,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/resume.dart';
 import '../../../widgets/shimmer_skeleton.dart';
 import '../providers/home_dashboard_notifier.dart';
-import '../widgets/ats_trend_chart.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/resume_preview_card.dart';
 
@@ -100,9 +99,7 @@ class _DashboardHeader extends ConsumerWidget {
       homeDashboardProvider.select((async) => async.isLoading),
     );
     final fullName = ref.watch(
-      homeDashboardProvider.select(
-        (async) => async.value?.user?.fullName,
-      ),
+      homeDashboardProvider.select((async) => async.value?.user?.fullName),
     );
 
     if (isLoading && fullName == null) {
@@ -323,15 +320,6 @@ class _DashboardInsights extends ConsumerWidget {
               },
             ),
           ),
-          const SizedBox(height: 32),
-          Text(
-            'AI Resume Score Trend',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-          AtsTrendChart(resumes: recentResumes),
         ],
       ),
     );

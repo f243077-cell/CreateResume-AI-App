@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../../core/errors/failures.dart';
 import '../../../domain/entities/education.dart';
+import '../../../domain/entities/honor.dart';
 import '../../../domain/entities/project.dart';
 import '../../../domain/entities/resume.dart';
 import '../../../domain/entities/skill.dart';
@@ -36,17 +37,6 @@ class GenerateResumeWithAIUseCase {
     Uuid? uuid,
   }) : _uuid = uuid ?? const Uuid();
 
-  /// Generates a complete resume from a user description.
-  ///
-  /// Parameters:
-  /// - [description]: User's self-description (experience, skills, education)
-  /// - [careerStage]: Career stage (entry-level, mid-level, senior, executive)
-  /// - [jobTitle]: Target job title for the resume
-  /// - [templateId]: Template ID to use for the resume
-  /// - [userId]: User ID for credit deduction and resume ownership
-  ///
-  /// Throws [InsufficientCreditsException] if the user has less than 2 credits.
-  /// Returns `Either<Failure, Resume>` with the created resume entity.
   Future<Either<Failure, Resume>> call({
     required String description,
     required String careerStage,
@@ -54,58 +44,38 @@ class GenerateResumeWithAIUseCase {
     required String templateId,
     required String userId,
   }) async {
-    // 1. Fetch user profile to check credits
     final profileResult = await _userProfileRepository.getProfile(userId);
 
-    return profileResult.fold(
-      (failure) => Left(failure),
-      (user) async {
-        // 2. Validate credit balance (requires 2 credits)
-        if (user.creditBalance < 2) {
-          throw InsufficientCreditsException(
-            requested: 2,
-            available: user.creditBalance,
-          );
-        }
+    return profileResult.fold((failure) => Left(failure), (user) async {
+      if (user.creditBalance < 2) {
+        throw InsufficientCreditsException(
+          requested: 2,
+          available: user.creditBalance,
+        );
+      }
 
-        // 3. Generate AI resume data
-        final aiResult = await _aiService.generateResumeFromDescription(
-          description: description,
-          careerStage: careerStage,
-          jobTitle: jobTitle,
+      final aiResult = await _aiService.generateResumeFromDescription(
+        description: description,
+        careerStage: careerStage,
+        jobTitle: jobTitle,
+        userId: userId,
+      );
+
+      return aiResult.fold((failure) => Left(failure), (aiData) async {
+        final resume = _mapAiDataToResume(
+          aiData: aiData,
           userId: userId,
+          templateId: templateId,
         );
 
-        return aiResult.fold(
-          (failure) => Left(failure),
-          (aiData) async {
-            // 4. Map AI response to Resume entity
-            final resume = _mapAiDataToResume(
-              aiData: aiData,
-              userId: userId,
-              templateId: templateId,
-            );
+        final saveResult = await _resumeRepository.createResume(resume);
 
-            // 5. Save resume to database
-            final saveResult = await _resumeRepository.createResume(resume);
-
-            return saveResult.fold(
-              (failure) => Left(failure),
-              (savedResume) async {
-                // 6. Deduct 2 credits on success
-                await _userProfileRepository.deductCredits(
-                  userId: userId,
-                  amount: 2,
-                );
-
-                // 7. Return the saved resume
-                return Right(savedResume);
-              },
-            );
-          },
-        );
-      },
-    );
+        return saveResult.fold((failure) => Left(failure), (savedResume) async {
+          await _userProfileRepository.deductCredits(userId: userId, amount: 2);
+          return Right(savedResume);
+        });
+      });
+    });
   }
 
   /// Maps AI-generated JSON data to Resume domain entity with sub-entities.
@@ -116,13 +86,14 @@ class GenerateResumeWithAIUseCase {
   }) {
     final now = DateTime.now();
 
-    // Map work experiences
-    final workExperiences = (aiData['workExperiences'] as List<dynamic>?)
-            ?.map<WorkExperience>((exp) {
+    final workExperiences =
+        (aiData['workExperiences'] as List<dynamic>?)?.map<WorkExperience>((
+          exp,
+        ) {
           final expData = exp as Map<String, dynamic>;
           return WorkExperience(
             id: _uuid.v4(),
-            resumeId: '', // Will be set after save
+            resumeId: '',
             company: expData['company'] as String? ?? '',
             role: expData['role'] as String? ?? '',
             startDate: _parseDate(expData['startDate']),
@@ -134,13 +105,12 @@ class GenerateResumeWithAIUseCase {
         }).toList() ??
         [];
 
-    // Map educations
-    final educations = (aiData['educations'] as List<dynamic>?)
-            ?.map<Education>((edu) {
+    final educations =
+        (aiData['educations'] as List<dynamic>?)?.map<Education>((edu) {
           final eduData = edu as Map<String, dynamic>;
           return Education(
             id: _uuid.v4(),
-            resumeId: '', // Will be set after save
+            resumeId: '',
             institution: eduData['institution'] as String? ?? '',
             degree: eduData['degree'] as String? ?? '',
             field: eduData['field'] as String? ?? '',
@@ -152,34 +122,53 @@ class GenerateResumeWithAIUseCase {
         }).toList() ??
         [];
 
-    // Map skills
-    final skills = (aiData['skills'] as List<dynamic>?)
-            ?.map<Skill>((skill) {
+    // Map skills — now reads `category` from the AI response so the PDF
+    // template can group skills as "Languages: Go, Python, C++" instead
+    // of a flat bulleted list. Falls back to null if the AI didn't
+    // provide one (template groups these under "Other").
+    final skills =
+        (aiData['skills'] as List<dynamic>?)?.map<Skill>((skill) {
           final skillData = skill as Map<String, dynamic>;
           return Skill(
             id: _uuid.v4(),
-            resumeId: '', // Will be set after save
+            resumeId: '',
             name: skillData['name'] as String? ?? '',
             level: skillData['level'] as String?,
+            category: skillData['category'] as String?,
             orderIndex: 0,
           );
         }).toList() ??
         [];
 
-    // Map projects
-    final projects = (aiData['projects'] as List<dynamic>?)
-            ?.map<Project>((proj) {
+    final projects =
+        (aiData['projects'] as List<dynamic>?)?.map<Project>((proj) {
           final projData = proj as Map<String, dynamic>;
           return Project(
             id: _uuid.v4(),
-            resumeId: '', // Will be set after save
+            resumeId: '',
             name: projData['name'] as String? ?? '',
             description: projData['description'] as String? ?? '',
-            techStack: (projData['techStack'] as List<dynamic>?)
+            techStack:
+                (projData['techStack'] as List<dynamic>?)
                     ?.map((t) => t.toString())
                     .toList() ??
                 [],
             url: projData['url'] as String?,
+            orderIndex: 0,
+          );
+        }).toList() ??
+        [];
+
+    // Map honors/awards, if the AI response includes any.
+    final honors =
+        (aiData['honors'] as List<dynamic>?)?.map<Honor>((honor) {
+          final honorData = honor as Map<String, dynamic>;
+          return Honor(
+            id: _uuid.v4(),
+            resumeId: '',
+            title: honorData['title'] as String? ?? '',
+            description: honorData['description'] as String?,
+            certificateUrl: honorData['certificateUrl'] as String?,
             orderIndex: 0,
           );
         }).toList() ??
@@ -190,6 +179,8 @@ class GenerateResumeWithAIUseCase {
       userId: userId,
       title: aiData['jobTitle'] as String? ?? 'AI Generated Resume',
       templateId: templateId,
+      // Paragraph-style professional summary from the AI response.
+      summary: aiData['summary'] as String?,
       atsScore: null,
       isPublished: false,
       createdAt: now,
@@ -198,33 +189,25 @@ class GenerateResumeWithAIUseCase {
       educations: educations,
       skills: skills,
       projects: projects,
+      honors: honors,
     );
   }
 
-  /// Parses a date string to DateTime.
-  /// Handles formats like "Jan 2020", "2020-01", etc.
   DateTime _parseDate(dynamic date) {
     if (date == null) return DateTime.now();
     if (date is DateTime) return date;
     if (date is String) {
-      // Simple parsing - in production, use intl package
       final parts = date.split(' ');
       if (parts.length == 2) {
-        // Assume "MMM yyyy" format
-        return DateTime(
-          int.parse(parts[1]),
-          _monthToNumber(parts[0]),
-        );
+        return DateTime(int.parse(parts[1]), _monthToNumber(parts[0]));
       }
       if (parts.length == 1 && parts[0].length == 4) {
-        // Just year
         return DateTime(int.parse(parts[0]));
       }
     }
     return DateTime.now();
   }
 
-  /// Converts month name to number (1-12).
   int _monthToNumber(String month) {
     final months = {
       'jan': 1,
@@ -244,7 +227,6 @@ class GenerateResumeWithAIUseCase {
     return months[key] ?? 1;
   }
 
-  /// Parses GPA string to double.
   double? _parseGpa(dynamic gpa) {
     if (gpa == null) return null;
     if (gpa is double) return gpa;

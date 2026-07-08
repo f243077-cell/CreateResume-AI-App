@@ -19,8 +19,11 @@ class SupabaseUserProfileRepository implements IUserProfileRepository {
   @override
   Future<Either<Failure, User>> getProfile(String userId) async {
     try {
-      final data =
-          await _db.from('profiles').select().eq('id', userId).single();
+      final data = await _db
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .single();
       return Right(_mapToUser(data));
     } catch (e) {
       return Left(ServerFailure('Failed to fetch profile: $e'));
@@ -39,6 +42,12 @@ class SupabaseUserProfileRepository implements IUserProfileRepository {
             'credit_balance': user.creditBalance,
             'ai_writing_style': user.aiWritingStyle,
             'theme_preference': user.themePreference,
+            'phone': user.phone,
+            'location': user.location,
+            'job_title': user.jobTitle,
+            'linkedin': user.linkedin,
+            'github': user.github,
+            'leetcode': user.leetcode,
           })
           .eq('id', user.id)
           .select()
@@ -64,9 +73,7 @@ class SupabaseUserProfileRepository implements IUserProfileRepository {
       );
 
       // Persist URL to profile row
-      await _db
-          .from('profiles')
-          .update({'photo_url': url}).eq('id', userId);
+      await _db.from('profiles').update({'photo_url': url}).eq('id', userId);
 
       return Right(url);
     } catch (e) {
@@ -80,16 +87,20 @@ class SupabaseUserProfileRepository implements IUserProfileRepository {
     required int amount,
   }) async {
     try {
-      // Use RPC or direct update. We do an atomic decrement via raw update.
-      final currentData =
-          await _db.from('profiles').select('credit_balance').eq('id', userId).single();
+      final currentData = await _db
+          .from('profiles')
+          .select('credit_balance')
+          .eq('id', userId)
+          .single();
       final currentBalance = currentData['credit_balance'] as int;
 
       if (currentBalance < amount) {
-        return Left(InsufficientCreditsFailure(
-          requested: amount,
-          available: currentBalance,
-        ));
+        return Left(
+          InsufficientCreditsFailure(
+            requested: amount,
+            available: currentBalance,
+          ),
+        );
       }
 
       final data = await _db
@@ -112,8 +123,11 @@ class SupabaseUserProfileRepository implements IUserProfileRepository {
     required int amount,
   }) async {
     try {
-      final currentData =
-          await _db.from('profiles').select('credit_balance').eq('id', userId).single();
+      final currentData = await _db
+          .from('profiles')
+          .select('credit_balance')
+          .eq('id', userId)
+          .single();
       final currentBalance = currentData['credit_balance'] as int;
 
       final data = await _db
@@ -137,13 +151,18 @@ class SupabaseUserProfileRepository implements IUserProfileRepository {
       email: data['email'] as String,
       fullName: data['full_name'] as String,
       photoUrl: data['photo_url'] as String?,
-      subscriptionStatus:
-          (data['subscription_status'] as String?) == 'premium'
-              ? SubscriptionStatus.premium
-              : SubscriptionStatus.free,
+      subscriptionStatus: (data['subscription_status'] as String?) == 'premium'
+          ? SubscriptionStatus.premium
+          : SubscriptionStatus.free,
       creditBalance: data['credit_balance'] as int? ?? 0,
       aiWritingStyle: data['ai_writing_style'] as String?,
       themePreference: data['theme_preference'] as String?,
+      phone: data['phone'] as String?,
+      location: data['location'] as String?,
+      jobTitle: data['job_title'] as String?,
+      linkedin: data['linkedin'] as String?,
+      github: data['github'] as String?,
+      leetcode: data['leetcode'] as String?,
     );
   }
 }

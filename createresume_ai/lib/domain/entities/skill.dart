@@ -6,6 +6,7 @@ class Skill extends Equatable {
   final String resumeId;
   final String name;
   final String? level;
+  final String? category;
   final int orderIndex;
 
   const Skill({
@@ -13,6 +14,7 @@ class Skill extends Equatable {
     required this.resumeId,
     required this.name,
     this.level,
+    this.category,
     this.orderIndex = 0,
   });
 
@@ -21,6 +23,7 @@ class Skill extends Equatable {
     String? resumeId,
     String? name,
     String? level,
+    String? category,
     int? orderIndex,
   }) {
     return Skill(
@@ -28,10 +31,11 @@ class Skill extends Equatable {
       resumeId: resumeId ?? this.resumeId,
       name: name ?? this.name,
       level: level ?? this.level,
+      category: category ?? this.category,
       orderIndex: orderIndex ?? this.orderIndex,
     );
   }
 
   @override
-  List<Object?> get props => [id, resumeId, name, level, orderIndex];
+  List<Object?> get props => [id, resumeId, name, level, category, orderIndex];
 }

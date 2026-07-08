@@ -210,7 +210,7 @@ class AiService implements IAIContentGenerator {
       try {
         final response = await _db.functions
             .invoke(functionName, body: body)
-            .timeout(const Duration(seconds: 30));
+            .timeout(const Duration(seconds: 60));
 
         if (response.status != 200) {
           // Try to surface the Edge Function's own error message from the

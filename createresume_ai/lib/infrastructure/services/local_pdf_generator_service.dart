@@ -17,27 +17,30 @@ class LocalPdfGeneratorService {
     required User user,
     required String templateId,
   }) async {
-    // Create ResumeData by combining Resume and User entities
     final resumeData = ResumeData(
       fullName: user.fullName,
-      jobTitle: null, // Job title would need to be stored separately
+      jobTitle: user.jobTitle,
       email: user.email,
-      phone: null, // Phone would need to be stored in User profile
-      location: null, // Location would need to be stored in User profile
-      summary: null, // Summary would need to be stored in Resume
+      phone: user.phone,
+      location: user.location,
+      summary: resume.summary,
+      linkedin: user.linkedin,
+      github: user.github,
+      leetcode: user.leetcode,
       workExperiences: resume.workExperiences,
       educations: resume.educations,
       skills: resume.skills,
       projects: resume.projects,
+      honors: resume.honors,
     );
 
     final ResumeTemplateBase template = switch (templateId) {
-      'classic_style1'    => ClassicTemplate(),
-      'modern_style1'     => ModernTemplate(),
-      'minimal_style1'    => MinimalTemplate(),
-      'executive_style1'  => ExecutiveTemplate(),
+      'classic_style1' => ClassicTemplate(),
+      'modern_style1' => ModernTemplate(),
+      'minimal_style1' => MinimalTemplate(),
+      'executive_style1' => ExecutiveTemplate(),
       'executive_style2' => Executive2Template(),
-      _                   => ClassicTemplate(), // fallback default
+      _ => ClassicTemplate(), // fallback default
     };
 
     final doc = await template.generate(resumeData);
