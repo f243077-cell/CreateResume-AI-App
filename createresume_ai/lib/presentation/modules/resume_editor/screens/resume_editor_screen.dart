@@ -14,15 +14,46 @@ import '../providers/resume_editor_notifier.dart';
 import '../widgets/editor_section.dart';
 import '../widgets/forms/work_experience_form.dart';
 
-class ResumeEditorScreen extends ConsumerWidget {
+class ResumeEditorScreen extends ConsumerStatefulWidget {
   final String resumeId;
+  final String? initialTemplateId;
 
-  const ResumeEditorScreen({super.key, required this.resumeId});
+  const ResumeEditorScreen({
+    super.key,
+    required this.resumeId,
+    this.initialTemplateId,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ResumeEditorScreen> createState() => _ResumeEditorScreenState();
+}
+
+class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
+  bool _hasAppliedInitialTemplate = false;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final editorState = ref.watch(resumeEditorProvider(resumeId));
+    final editorState = ref.watch(resumeEditorProvider(widget.resumeId));
+
+    // Apply the template chosen on the Template Selection screen exactly
+    // once, right after the resume finishes loading — this is what the
+    // navigation query parameter was for, but was previously never read.
+    ref.listen(resumeEditorProvider(widget.resumeId), (previous, next) {
+      final incomingTemplateId = widget.initialTemplateId;
+      if (_hasAppliedInitialTemplate || incomingTemplateId == null) return;
+
+      next.whenData((resume) {
+        if (resume.templateId != incomingTemplateId) {
+          _hasAppliedInitialTemplate = true;
+          ref
+              .read(resumeEditorProvider(widget.resumeId).notifier)
+              .changeTemplate(incomingTemplateId);
+        } else {
+          _hasAppliedInitialTemplate = true;
+        }
+      });
+    });
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -34,7 +65,7 @@ class ResumeEditorScreen extends ConsumerWidget {
             icon: const Icon(Icons.close_rounded),
             onPressed: () {
               // Save on exit
-              ref.read(resumeEditorProvider(resumeId).notifier).saveToCloud();
+              ref.read(resumeEditorProvider(widget.resumeId).notifier).saveToCloud();
               context.pop();
             },
           ),
@@ -52,24 +83,22 @@ class ResumeEditorScreen extends ConsumerWidget {
               icon: const Icon(Icons.style_rounded),
               tooltip: 'Change Template',
               onSelected: (templateId) {
-                ref
-                    .read(resumeEditorProvider(resumeId).notifier)
-                    .changeTemplate(templateId);
+                ref.read(resumeEditorProvider(widget.resumeId).notifier).changeTemplate(templateId);
               },
-              itemBuilder: (context) => LocalPdfGeneratorService
-                  .availableTemplates
-                  .map(
-                    (template) => PopupMenuItem(
-                      value: template['id'],
-                      child: Row(
-                        children: [
-                          Icon(_getTemplateIcon(template['id']!), size: 18),
-                          const SizedBox(width: 8),
-                          Text(template['name']!),
-                        ],
-                      ),
-                    ),
-                  )
+              itemBuilder: (context) => LocalPdfGeneratorService.availableTemplates
+                  .map((template) => PopupMenuItem(
+                        value: template['id'],
+                        child: Row(
+                          children: [
+                            Icon(
+                              _getTemplateIcon(template['id']!),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(template['name']!),
+                          ],
+                        ),
+                      ))
                   .toList(),
             ),
           ),
@@ -79,7 +108,7 @@ class ResumeEditorScreen extends ConsumerWidget {
             label: 'Export resume as PDF',
             child: OutlinedButton(
               onPressed: () {
-                ref.read(resumeEditorProvider(resumeId).notifier).exportPdf();
+                ref.read(resumeEditorProvider(widget.resumeId).notifier).exportPdf();
               },
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -94,7 +123,7 @@ class ResumeEditorScreen extends ConsumerWidget {
             label: 'Save resume to cloud',
             child: ElevatedButton(
               onPressed: () {
-                ref.read(resumeEditorProvider(resumeId).notifier).saveToCloud();
+                ref.read(resumeEditorProvider(widget.resumeId).notifier).saveToCloud();
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(const SnackBar(content: Text('Saved to Cloud')));
@@ -154,7 +183,7 @@ class ResumeEditorScreen extends ConsumerWidget {
                         }
 
                         ref
-                            .read(resumeEditorProvider(resumeId).notifier)
+                            .read(resumeEditorProvider(widget.resumeId).notifier)
                             .updateResumeLocally(
                               resume.copyWith(workExperiences: updatedList),
                             );
@@ -183,25 +212,16 @@ class ResumeEditorScreen extends ConsumerWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(
-                                  Icons.delete_rounded,
-                                  size: 20,
-                                ),
+                                icon: const Icon(Icons.delete_rounded, size: 20),
                                 onPressed: () {
                                   final updatedList = List<WorkExperience>.from(
                                     resume.workExperiences,
                                   );
-                                  updatedList.removeWhere(
-                                    (e) => e.id == exp.id,
-                                  );
+                                  updatedList.removeWhere((e) => e.id == exp.id);
                                   ref
-                                      .read(
-                                        resumeEditorProvider(resumeId).notifier,
-                                      )
+                                      .read(resumeEditorProvider(widget.resumeId).notifier)
                                       .updateResumeLocally(
-                                        resume.copyWith(
-                                          workExperiences: updatedList,
-                                        ),
+                                        resume.copyWith(workExperiences: updatedList),
                                       );
                                 },
                               ),
@@ -240,7 +260,7 @@ class ResumeEditorScreen extends ConsumerWidget {
                         }
 
                         ref
-                            .read(resumeEditorProvider(resumeId).notifier)
+                            .read(resumeEditorProvider(widget.resumeId).notifier)
                             .updateResumeLocally(
                               resume.copyWith(educations: updatedList),
                             );
@@ -269,25 +289,16 @@ class ResumeEditorScreen extends ConsumerWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(
-                                  Icons.delete_rounded,
-                                  size: 20,
-                                ),
+                                icon: const Icon(Icons.delete_rounded, size: 20),
                                 onPressed: () {
                                   final updatedList = List<Education>.from(
                                     resume.educations,
                                   );
-                                  updatedList.removeWhere(
-                                    (e) => e.id == edu.id,
-                                  );
+                                  updatedList.removeWhere((e) => e.id == edu.id);
                                   ref
-                                      .read(
-                                        resumeEditorProvider(resumeId).notifier,
-                                      )
+                                      .read(resumeEditorProvider(widget.resumeId).notifier)
                                       .updateResumeLocally(
-                                        resume.copyWith(
-                                          educations: updatedList,
-                                        ),
+                                        resume.copyWith(educations: updatedList),
                                       );
                                 },
                               ),
@@ -326,7 +337,7 @@ class ResumeEditorScreen extends ConsumerWidget {
                         }
 
                         ref
-                            .read(resumeEditorProvider(resumeId).notifier)
+                            .read(resumeEditorProvider(widget.resumeId).notifier)
                             .updateResumeLocally(
                               resume.copyWith(skills: updatedList),
                             );
@@ -341,9 +352,7 @@ class ResumeEditorScreen extends ConsumerWidget {
                             skill.name,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: skill.level != null
-                              ? Text(skill.level!)
-                              : null,
+                          subtitle: skill.level != null ? Text(skill.level!) : null,
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -357,21 +366,14 @@ class ResumeEditorScreen extends ConsumerWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(
-                                  Icons.delete_rounded,
-                                  size: 20,
-                                ),
+                                icon: const Icon(Icons.delete_rounded, size: 20),
                                 onPressed: () {
                                   final updatedList = List<Skill>.from(
                                     resume.skills,
                                   );
-                                  updatedList.removeWhere(
-                                    (s) => s.id == skill.id,
-                                  );
+                                  updatedList.removeWhere((s) => s.id == skill.id);
                                   ref
-                                      .read(
-                                        resumeEditorProvider(resumeId).notifier,
-                                      )
+                                      .read(resumeEditorProvider(widget.resumeId).notifier)
                                       .updateResumeLocally(
                                         resume.copyWith(skills: updatedList),
                                       );
@@ -412,7 +414,7 @@ class ResumeEditorScreen extends ConsumerWidget {
                         }
 
                         ref
-                            .read(resumeEditorProvider(resumeId).notifier)
+                            .read(resumeEditorProvider(widget.resumeId).notifier)
                             .updateResumeLocally(
                               resume.copyWith(projects: updatedList),
                             );
@@ -447,21 +449,14 @@ class ResumeEditorScreen extends ConsumerWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(
-                                  Icons.delete_rounded,
-                                  size: 20,
-                                ),
+                                icon: const Icon(Icons.delete_rounded, size: 20),
                                 onPressed: () {
                                   final updatedList = List<Project>.from(
                                     resume.projects,
                                   );
-                                  updatedList.removeWhere(
-                                    (p) => p.id == proj.id,
-                                  );
+                                  updatedList.removeWhere((p) => p.id == proj.id);
                                   ref
-                                      .read(
-                                        resumeEditorProvider(resumeId).notifier,
-                                      )
+                                      .read(resumeEditorProvider(widget.resumeId).notifier)
                                       .updateResumeLocally(
                                         resume.copyWith(projects: updatedList),
                                       );
@@ -499,8 +494,7 @@ class ResumeEditorScreen extends ConsumerWidget {
                 button: true,
                 label: 'Retry loading resume',
                 child: ElevatedButton(
-                  onPressed: () =>
-                      ref.invalidate(resumeEditorProvider(resumeId)),
+                  onPressed: () => ref.invalidate(resumeEditorProvider(widget.resumeId)),
                   child: const Text('Retry'),
                 ),
               ),
@@ -527,7 +521,7 @@ class ResumeEditorScreen extends ConsumerWidget {
         return WorkExperienceForm(
           initialData: initialData,
           onAiImprove: (text) => ref
-              .read(resumeEditorProvider(resumeId).notifier)
+              .read(resumeEditorProvider(widget.resumeId).notifier)
               .aiImproveText(text),
           onSave: (updatedExp) {
             final List<WorkExperience> updatedList = List.from(
@@ -542,7 +536,7 @@ class ResumeEditorScreen extends ConsumerWidget {
               );
             }
             ref
-                .read(resumeEditorProvider(resumeId).notifier)
+                .read(resumeEditorProvider(widget.resumeId).notifier)
                 .updateResumeLocally(
                   resume.copyWith(workExperiences: updatedList),
                 );
@@ -558,18 +552,10 @@ class ResumeEditorScreen extends ConsumerWidget {
     resume, {
     Education? initialData,
   }) {
-    final degreeController = TextEditingController(
-      text: initialData?.degree ?? '',
-    );
-    final institutionController = TextEditingController(
-      text: initialData?.institution ?? '',
-    );
-    final fieldController = TextEditingController(
-      text: initialData?.field ?? '',
-    );
-    final gpaController = TextEditingController(
-      text: initialData?.gpa?.toString() ?? '',
-    );
+    final degreeController = TextEditingController(text: initialData?.degree ?? '');
+    final institutionController = TextEditingController(text: initialData?.institution ?? '');
+    final fieldController = TextEditingController(text: initialData?.field ?? '');
+    final gpaController = TextEditingController(text: initialData?.gpa?.toString() ?? '');
 
     showDialog(
       context: context,
@@ -618,19 +604,15 @@ class ResumeEditorScreen extends ConsumerWidget {
                 orderIndex: initialData?.orderIndex ?? resume.educations.length,
               );
               final updatedList = List<Education>.from(resume.educations);
-              final index = updatedList.indexWhere(
-                (e) => e.id == updatedEdu.id,
-              );
+              final index = updatedList.indexWhere((e) => e.id == updatedEdu.id);
               if (index >= 0) {
                 updatedList[index] = updatedEdu;
               } else {
                 updatedList.add(updatedEdu);
               }
               ref
-                  .read(resumeEditorProvider(resumeId).notifier)
-                  .updateResumeLocally(
-                    resume.copyWith(educations: updatedList),
-                  );
+                  .read(resumeEditorProvider(widget.resumeId).notifier)
+                  .updateResumeLocally(resume.copyWith(educations: updatedList));
               Navigator.pop(context);
             },
             child: const Text('Save'),
@@ -647,9 +629,7 @@ class ResumeEditorScreen extends ConsumerWidget {
     Skill? initialData,
   }) {
     final nameController = TextEditingController(text: initialData?.name ?? '');
-    final levelController = TextEditingController(
-      text: initialData?.level ?? 'intermediate',
-    );
+    final levelController = TextEditingController(text: initialData?.level ?? 'intermediate');
 
     showDialog(
       context: context,
@@ -664,9 +644,7 @@ class ResumeEditorScreen extends ConsumerWidget {
             ),
             TextField(
               controller: levelController,
-              decoration: const InputDecoration(
-                labelText: 'Level (beginner/intermediate/expert)',
-              ),
+              decoration: const InputDecoration(labelText: 'Level (beginner/intermediate/expert)'),
             ),
           ],
         ),
@@ -685,16 +663,14 @@ class ResumeEditorScreen extends ConsumerWidget {
                 orderIndex: initialData?.orderIndex ?? resume.skills.length,
               );
               final updatedList = List<Skill>.from(resume.skills);
-              final index = updatedList.indexWhere(
-                (s) => s.id == updatedSkill.id,
-              );
+              final index = updatedList.indexWhere((s) => s.id == updatedSkill.id);
               if (index >= 0) {
                 updatedList[index] = updatedSkill;
               } else {
                 updatedList.add(updatedSkill);
               }
               ref
-                  .read(resumeEditorProvider(resumeId).notifier)
+                  .read(resumeEditorProvider(widget.resumeId).notifier)
                   .updateResumeLocally(resume.copyWith(skills: updatedList));
               Navigator.pop(context);
             },
@@ -712,9 +688,7 @@ class ResumeEditorScreen extends ConsumerWidget {
     Project? initialData,
   }) {
     final nameController = TextEditingController(text: initialData?.name ?? '');
-    final descriptionController = TextEditingController(
-      text: initialData?.description ?? '',
-    );
+    final descriptionController = TextEditingController(text: initialData?.description ?? '');
     final urlController = TextEditingController(text: initialData?.url ?? '');
     final techStackController = TextEditingController(
       text: initialData?.techStack.join(', ') ?? '',
@@ -739,9 +713,7 @@ class ResumeEditorScreen extends ConsumerWidget {
               ),
               TextField(
                 controller: techStackController,
-                decoration: const InputDecoration(
-                  labelText: 'Tech Stack (comma-separated)',
-                ),
+                decoration: const InputDecoration(labelText: 'Tech Stack (comma-separated)'),
               ),
               TextField(
                 controller: urlController,
@@ -771,16 +743,14 @@ class ResumeEditorScreen extends ConsumerWidget {
                 orderIndex: initialData?.orderIndex ?? resume.projects.length,
               );
               final updatedList = List<Project>.from(resume.projects);
-              final index = updatedList.indexWhere(
-                (p) => p.id == updatedProject.id,
-              );
+              final index = updatedList.indexWhere((p) => p.id == updatedProject.id);
               if (index >= 0) {
                 updatedList[index] = updatedProject;
               } else {
                 updatedList.add(updatedProject);
               }
               ref
-                  .read(resumeEditorProvider(resumeId).notifier)
+                  .read(resumeEditorProvider(widget.resumeId).notifier)
                   .updateResumeLocally(resume.copyWith(projects: updatedList));
               Navigator.pop(context);
             },
@@ -811,17 +781,11 @@ class ResumeEditorScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.description_rounded,
-                color: AppColors.blue400,
-                size: 20,
-              ),
+              const Icon(Icons.description_rounded, color: AppColors.blue400, size: 20),
               const SizedBox(width: 12),
               Text(
                 'Resume Title',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               IconButton(
@@ -843,12 +807,8 @@ class ResumeEditorScreen extends ConsumerWidget {
                         ElevatedButton(
                           onPressed: () {
                             ref
-                                .read(resumeEditorProvider(resumeId).notifier)
-                                .updateResumeLocally(
-                                  resume.copyWith(
-                                    title: summaryController.text,
-                                  ),
-                                );
+                                .read(resumeEditorProvider(widget.resumeId).notifier)
+                                .updateResumeLocally(resume.copyWith(title: summaryController.text));
                             Navigator.pop(context);
                           },
                           child: const Text('Save'),
@@ -861,7 +821,10 @@ class ResumeEditorScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(resume.title, style: theme.textTheme.bodyMedium),
+          Text(
+            resume.title,
+            style: theme.textTheme.bodyMedium,
+          ),
         ],
       ),
     );
@@ -869,14 +832,16 @@ class ResumeEditorScreen extends ConsumerWidget {
 
   IconData _getTemplateIcon(String templateId) {
     switch (templateId) {
-      case 'classic':
+      case 'classic_style1':
         return Icons.description_rounded;
-      case 'modern':
+      case 'modern_style1':
         return Icons.view_column_rounded;
-      case 'minimal':
+      case 'minimal_style1':
         return Icons.minimize_rounded;
-      case 'executive':
+      case 'executive_style1':
         return Icons.workspace_premium_rounded;
+      case 'executive_style2':
+        return Icons.diamond_rounded;
       default:
         return Icons.description_rounded;
     }

@@ -66,13 +66,19 @@ class SupabaseUserProfileRepository implements IUserProfileRepository {
   }) async {
     try {
       final storagePath = '$userId/avatar.jpg';
-      final url = await _storage.uploadFile(
+      final rawUrl = await _storage.uploadFile(
         bucket: 'profile-photos',
         storagePath: storagePath,
         filePath: filePath,
       );
 
-      // Persist URL to profile row
+      // Append a cache-busting query param so Flutter's NetworkImage
+      // cache (keyed by URL string) treats each re-upload as a new
+      // image instead of serving stale cached bytes for the same path.
+      final url = '$rawUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+
+      // Persist the cache-busted URL to profile row so it's consistent
+      // on next app load too.
       await _db.from('profiles').update({'photo_url': url}).eq('id', userId);
 
       return Right(url);

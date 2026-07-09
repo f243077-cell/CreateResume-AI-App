@@ -11,27 +11,25 @@ class LocalPdfGeneratorService {
   /// Generate PDF bytes from a Resume entity using the selected template.
   /// Combines Resume entity with User entity for personal information.
   ///
-  /// templateId: 'classic' | 'modern' | 'minimal' | 'executive' | 'executive2'
+  /// templateId: 'classic_style1' | 'modern_style1' | 'minimal_style1' |
+  ///             'executive_style1' | 'executive_style2'
   Future<List<int>> generatePdf({
     required Resume resume,
     required User user,
     required String templateId,
   }) async {
+    // Create ResumeData by combining Resume and User entities
     final resumeData = ResumeData(
       fullName: user.fullName,
-      jobTitle: user.jobTitle,
+      jobTitle: null, // Job title would need to be stored separately
       email: user.email,
-      phone: user.phone,
-      location: user.location,
-      summary: resume.summary,
-      linkedin: user.linkedin,
-      github: user.github,
-      leetcode: user.leetcode,
+      phone: null, // Phone would need to be stored in User profile
+      location: null, // Location would need to be stored in User profile
+      summary: null, // Summary would need to be stored in Resume
       workExperiences: resume.workExperiences,
       educations: resume.educations,
       skills: resume.skills,
       projects: resume.projects,
-      honors: resume.honors,
     );
 
     final ResumeTemplateBase template = switch (templateId) {
@@ -50,27 +48,27 @@ class LocalPdfGeneratorService {
   /// Returns all available template IDs with display names for UI picker
   static List<Map<String, String>> get availableTemplates => [
     {
-      'id': 'classic',
+      'id': 'classic_style1',
       'name': 'Classic',
       'description': 'Traditional corporate look — dark header, clean sections',
     },
     {
-      'id': 'modern',
+      'id': 'modern_style1',
       'name': 'Modern',
       'description': 'Two-column layout — navy sidebar with skill bars',
     },
     {
-      'id': 'minimal',
+      'id': 'minimal_style1',
       'name': 'Minimal',
       'description': 'Ultra-clean — white space, typography-focused',
     },
     {
-      'id': 'executive',
+      'id': 'executive_style1',
       'name': 'Executive',
       'description': 'Premium feel — gold accents, card-based experience',
     },
     {
-      'id': 'executive2',
+      'id': 'executive_style2',
       'name': 'Executive 2',
       'description': 'Two-column layout — teal sidebar with skill bars',
     },

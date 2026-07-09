@@ -101,15 +101,23 @@ class _DashboardHeader extends ConsumerWidget {
     final fullName = ref.watch(
       homeDashboardProvider.select((async) => async.value?.user?.fullName),
     );
+    final photoUrl = ref.watch(
+      homeDashboardProvider.select((async) => async.value?.user?.photoUrl),
+    );
 
     if (isLoading && fullName == null) {
       return _buildHeaderSkeleton(theme);
     }
 
-    return _buildHeader(context, theme, fullName);
+    return _buildHeader(context, theme, fullName, photoUrl);
   }
 
-  Widget _buildHeader(BuildContext context, ThemeData theme, String? fullName) {
+  Widget _buildHeader(
+    BuildContext context,
+    ThemeData theme,
+    String? fullName,
+    String? photoUrl,
+  ) {
     final firstName = fullName?.split(' ').first ?? 'User';
     final initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
@@ -145,19 +153,29 @@ class _DashboardHeader extends ConsumerWidget {
               child: CircleAvatar(
                 radius: 24,
                 backgroundColor: AppColors.navy800,
-                child: Text(
-                  initials,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                backgroundImage: photoUrl != null
+                    ? _cachedProfileImage(context, photoUrl)
+                    : null,
+                child: photoUrl == null
+                    ? Text(
+                        initials,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
               ),
             ),
           ),
         ),
       ],
     );
+  }
+
+  ImageProvider _cachedProfileImage(BuildContext context, String url) {
+    final cacheSize = (48 * MediaQuery.devicePixelRatioOf(context)).round();
+    return ResizeImage.resizeIfNeeded(cacheSize, cacheSize, NetworkImage(url));
   }
 
   Widget _buildHeaderSkeleton(ThemeData theme) {

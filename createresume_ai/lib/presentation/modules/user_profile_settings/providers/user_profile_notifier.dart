@@ -1,3 +1,4 @@
+import 'package:createresume_app/presentation/modules/home_dashboard/providers/home_dashboard_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -10,24 +11,22 @@ class UserProfileState {
   final bool isLoading;
   final String? error;
 
-  const UserProfileState({
-    this.profile,
-    this.isLoading = false,
-    this.error,
-  });
+  const UserProfileState({this.profile, this.isLoading = false, this.error});
 
   UserProfileState copyWith({
     User? profile,
     bool? isLoading,
-    String? error,
+    Object? error = _sentinel,
   }) {
     return UserProfileState(
       profile: profile ?? this.profile,
       isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
+      error: identical(error, _sentinel) ? this.error : error as String?,
     );
   }
 }
+
+const _sentinel = Object();
 
 class UserProfileNotifier extends Notifier<UserProfileState> {
   @override
@@ -77,11 +76,17 @@ class UserProfileNotifier extends Notifier<UserProfileState> {
         } else {
           state = state.copyWith(isLoading: false);
         }
+        ref.invalidate(authStateProvider); // ← add this line
+        ref.invalidate(homeDashboardProvider);
       },
     );
   }
 
-  Future<void> updateProfile({String? fullName, String? email, String? aiWritingStyle}) async {
+  Future<void> updateProfile({
+    String? fullName,
+    String? email,
+    String? aiWritingStyle,
+  }) async {
     final userAuth = ref.read(authStateProvider).value;
     if (userAuth == null) return;
 
@@ -99,6 +104,8 @@ class UserProfileNotifier extends Notifier<UserProfileState> {
       (l) => state = state.copyWith(isLoading: false, error: l.message),
       (updatedProfile) {
         state = state.copyWith(isLoading: false, profile: updatedProfile);
+        ref.invalidate(authStateProvider); // ← add this line
+        ref.invalidate(homeDashboardProvider);
       },
     );
   }
@@ -109,12 +116,14 @@ class UserProfileNotifier extends Notifier<UserProfileState> {
     final result = await signOut();
 
     result.fold(
-      (failure) => state = state.copyWith(isLoading: false, error: failure.message),
+      (failure) =>
+          state = state.copyWith(isLoading: false, error: failure.message),
       (_) => state = const UserProfileState(isLoading: false),
     );
   }
 }
 
-final userProfileProvider = NotifierProvider<UserProfileNotifier, UserProfileState>(
-  UserProfileNotifier.new,
-);
+final userProfileProvider =
+    NotifierProvider<UserProfileNotifier, UserProfileState>(
+      UserProfileNotifier.new,
+    );

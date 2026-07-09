@@ -53,8 +53,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       return null;
     },
-    errorBuilder: (context, state) =>
-        const Scaffold(body: Center(child: CircularProgressIndicator())),
+    errorBuilder: (context, state) => const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    ),
     routes: [
       GoRoute(
         path: AppRoutes.onboarding,
@@ -94,7 +95,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: AppRouteNames.resumeEditor,
         builder: (context, state) {
           final resumeId = state.pathParameters['resumeId']!;
-          return ResumeEditorScreen(resumeId: resumeId);
+          final templateId = state.uri.queryParameters['templateId'];
+          return ResumeEditorScreen(
+            resumeId: resumeId,
+            initialTemplateId: templateId,
+          );
         },
       ),
       GoRoute(

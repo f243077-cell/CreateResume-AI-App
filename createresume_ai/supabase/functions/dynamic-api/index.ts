@@ -1,7 +1,5 @@
-// @ts-nocheck
-// Setup type definitions for built-in Supabase Runtime APIs
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 
+<<<<<<< HEAD
 interface ReqPayload {
   description: string;
   careerStage: string;
@@ -216,3 +214,5 @@ The JSON must have exactly this structure:
     )
   }
 })
+=======
+>>>>>>> 7310742f126265537742e86bb8956e62c1fb4bd6
