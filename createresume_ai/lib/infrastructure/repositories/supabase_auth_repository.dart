@@ -24,15 +24,14 @@ class SupabaseAuthRepository implements IAuthRepository {
     required String password,
   }) async {
     try {
-      final response = await _db.auth.signInWithPassword(
-        email: email,
-        password: password,
-      ).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('Sign-in timed out after 30 seconds');
-        },
-      );
+      final response = await _db.auth
+          .signInWithPassword(email: email, password: password)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw Exception('Sign-in timed out after 30 seconds');
+            },
+          );
 
       final supaUser = response.user;
       if (supaUser == null) {
@@ -55,18 +54,21 @@ class SupabaseAuthRepository implements IAuthRepository {
     required String fullName,
   }) async {
     try {
-      
-      final response = await _db.auth.signUp(
-        email: email,
-        password: password,
-        data: {'full_name': fullName},
-        emailRedirectTo: null,
-      ).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('Sign-up timed out after 30 seconds. Check your internet connection and Supabase project status.');
-        },
-      );
+      final response = await _db.auth
+          .signUp(
+            email: email,
+            password: password,
+            data: {'full_name': fullName},
+            emailRedirectTo: null,
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw Exception(
+                'Sign-up timed out after 30 seconds. Check your internet connection and Supabase project status.',
+              );
+            },
+          );
 
       final supaUser = response.user;
       if (supaUser == null) {
@@ -75,22 +77,29 @@ class SupabaseAuthRepository implements IAuthRepository {
 
       // Check if email confirmation is required
       if (response.session == null) {
-        return const Left(AuthFailure('Please check your email to confirm your account before signing in.'));
+        return const Left(
+          AuthFailure(
+            'Please check your email to confirm your account before signing in.',
+          ),
+        );
       }
 
       // Upsert a profile row for the new user.
-      await _db.from('profiles').upsert({
-        'id': supaUser.id,
-        'email': email,
-        'full_name': fullName,
-        'subscription_status': 'free',
-        'credit_balance': 3, // Free starter credits
-      }).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Profile upsert timed out after 10 seconds');
-        },
-      );
+      await _db
+          .from('profiles')
+          .upsert({
+            'id': supaUser.id,
+            'email': email,
+            'full_name': fullName,
+            'subscription_status': 'free',
+            'credit_balance': 3, // Free starter credits
+          })
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('Profile upsert timed out after 10 seconds');
+            },
+          );
 
       final profile = await _fetchProfile(supaUser.id);
       return Right(profile);
@@ -106,7 +115,7 @@ class SupabaseAuthRepository implements IAuthRepository {
     try {
       await _db.auth.signInWithOAuth(
         supa.OAuthProvider.google,
-        redirectTo: 'io.supabase.createresume://login-callback/',
+        redirectTo: 'io.supabase.createresume://login-callback',
       );
 
       // OAuth is async — wait for session to settle.
@@ -156,7 +165,10 @@ class SupabaseAuthRepository implements IAuthRepository {
     required String email,
   }) async {
     try {
-      await _db.auth.resetPasswordForEmail(email);
+      await _db.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'io.supabase.createresume://reset-callback',
+      );
       return const Right(null);
     } on supa.AuthException catch (e) {
       return Left(AuthFailure(e.message));
@@ -185,20 +197,25 @@ class SupabaseAuthRepository implements IAuthRepository {
 
   Future<User> _fetchProfile(String userId) async {
     try {
-      final response = await _db.from('profiles').select().eq('id', userId).maybeSingle();
-      
+      final response = await _db
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+
       if (response == null) {
         // Profile doesn't exist, create a default one
         final user = _db.auth.currentUser;
         if (user == null) {
           throw Exception('No authenticated user found');
         }
-        
+
         final metadata = user.userMetadata ?? {};
-        final fullName = metadata['full_name'] as String? ?? 
-                         user.email?.split('@')[0] ?? 
-                         'User';
-        
+        final fullName =
+            metadata['full_name'] as String? ??
+            user.email?.split('@')[0] ??
+            'User';
+
         await _db.from('profiles').upsert({
           'id': userId,
           'email': user.email,
@@ -206,12 +223,16 @@ class SupabaseAuthRepository implements IAuthRepository {
           'subscription_status': 'free',
           'credit_balance': 3,
         });
-        
+
         // Fetch again after creating
-        final data = await _db.from('profiles').select().eq('id', userId).single();
+        final data = await _db
+            .from('profiles')
+            .select()
+            .eq('id', userId)
+            .single();
         return _mapToUser(data);
       }
-      
+
       return _mapToUser(response);
     } catch (e) {
       throw Exception('Failed to fetch profile for user $userId: $e');

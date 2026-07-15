@@ -22,6 +22,13 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
     return null;
   }
 
+  /// Resets generation state back to its initial null value.
+  /// Call this whenever the wizard flow is (re)entered, so a
+  /// previously-generated resume doesn't leak into a new session.
+  void reset() {
+    state = const AsyncValue.data(null);
+  }
+
   /// Generates a complete resume from a user description using AI.
   ///
   /// Parameters:
@@ -40,7 +47,6 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
     String? templateId,
   }) async {
     try {
-      // Get userId from auth state provider
       final user = ref.read(authStateProvider).value;
       if (user == null) {
         state = AsyncValue.error(
@@ -56,7 +62,7 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
         description: description,
         careerStage: careerStage,
         jobTitle: jobTitle,
-        templateId: templateId ?? 'modern', // Default to modern if not selected
+        templateId: templateId ?? 'modern',
         userId: user.id,
       );
 
@@ -66,11 +72,12 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
         },
         (resume) {
           state = AsyncValue.data(resume);
-          // Navigate to TemplateSelection screen to choose template style
-          ref.read(routerProvider).pushNamed(
-            AppRouteNames.templateSelection,
-            pathParameters: {'resumeId': resume.id},
-          );
+          ref
+              .read(routerProvider)
+              .pushNamed(
+                AppRouteNames.templateSelection,
+                pathParameters: {'resumeId': resume.id},
+              );
         },
       );
     } catch (e, stackTrace) {
@@ -85,5 +92,5 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
 /// Provider for the ResumeGenerationNotifier.
 final resumeGenerationProvider =
     AsyncNotifierProvider<ResumeGenerationNotifier, Resume?>(
-  ResumeGenerationNotifier.new,
-);
+      ResumeGenerationNotifier.new,
+    );

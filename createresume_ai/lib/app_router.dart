@@ -1,12 +1,17 @@
+// File: lib/app_router.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'application/providers/auth_state_provider.dart';
 import 'core/routing/app_routes.dart';
 import 'presentation/modules/all_resumes/screens/all_resumes_screen.dart';
 import 'presentation/modules/authentication/forgot_password_screen.dart';
 import 'presentation/modules/authentication/login_screen.dart';
+import 'presentation/modules/authentication/reset_password_screen.dart';
 import 'presentation/modules/authentication/signup_screen.dart';
 import 'presentation/modules/home_dashboard/screens/home_dashboard_screen.dart';
 import 'presentation/modules/onboarding/onboarding_screen.dart';
@@ -17,19 +22,34 @@ import 'presentation/modules/template_selection/screens/template_selection_scree
 import 'presentation/modules/user_profile_settings/screens/user_profile_screen.dart';
 import 'presentation/widgets/scaffold_with_nav_bar.dart';
 
-/// The global router provider for the app.
+final seenOnboardingProvider = FutureProvider<bool>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool('seen_onboarding') ?? false;
+});
+final passwordRecoveryProvider = StateProvider<bool>((ref) => false);
+
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
+  final seenOnboardingAsync = ref.watch(seenOnboardingProvider);
+  final seenOnboarding = seenOnboardingAsync.value;
+  final isRecovery = ref.watch(passwordRecoveryProvider);
 
   return GoRouter(
     initialLocation: AppRoutes.root,
     redirect: (context, state) {
-      if (authState.isLoading) {
-        return null;
-      }
+      final location = state.uri.path;
+      final isResetPassword = location == AppRoutes.resetPassword;
+
+      // Already on reset password screen — stay there.
+      if (isResetPassword) return null;
+
+      // Recovery mode active — force navigation to reset-password from
+      // any other route (especially '/' after router recreation).
+      if (isRecovery) return AppRoutes.resetPassword;
+
+      if (authState.isLoading || seenOnboarding == null) return null;
 
       final isAuthenticated = authState.value != null;
-      final location = state.uri.path;
       final isAuthRoute =
           location == AppRoutes.login ||
           location == AppRoutes.signup ||
@@ -38,24 +58,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isRoot = location == AppRoutes.root;
 
       if (isRoot) {
+        if (!seenOnboarding) return AppRoutes.onboarding;
         return isAuthenticated ? AppRoutes.home : AppRoutes.login;
       }
 
-      if (isAuthenticated) {
-        if (isAuthRoute || isOnboarding) {
-          return AppRoutes.home;
-        }
-      } else {
-        if (!isAuthRoute && !isOnboarding) {
-          return AppRoutes.login;
-        }
+      if (isAuthenticated && isAuthRoute) return AppRoutes.home;
+
+      if (!isAuthenticated && !isAuthRoute && !isOnboarding) {
+        return AppRoutes.login;
       }
 
       return null;
     },
-    errorBuilder: (context, state) => const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    ),
+    errorBuilder: (context, state) =>
+        const Scaffold(body: Center(child: CircularProgressIndicator())),
     routes: [
       GoRoute(
         path: AppRoutes.onboarding,
@@ -76,6 +92,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.forgotPassword,
         name: AppRouteNames.forgotPassword,
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        name: AppRouteNames.resetPassword,
+        builder: (context, state) => const ResetPasswordScreen(),
       ),
       GoRoute(
         path: AppRoutes.resumeWizard,
@@ -108,9 +129,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SubscriptionScreen(),
       ),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) {
-          return ScaffoldWithNavBar(navigationShell: navigationShell);
-        },
+        builder: (context, state, navigationShell) =>
+            ScaffoldWithNavBar(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
             routes: [

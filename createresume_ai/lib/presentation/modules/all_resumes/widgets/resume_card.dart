@@ -10,24 +10,19 @@ class ResumeCard extends ConsumerWidget {
   final Resume resume;
   final VoidCallback onTap;
 
-  const ResumeCard({
-    super.key,
-    required this.resume,
-    required this.onTap,
-  });
+  const ResumeCard({super.key, required this.resume, required this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    
+
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      color: AppColors.surfaceCard,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -36,7 +31,7 @@ class ResumeCard extends ConsumerWidget {
                 width: 60,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: AppColors.navy800,
+                  color: AppColors.burntOrange,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -104,16 +99,20 @@ class ResumeCard extends ConsumerWidget {
                         ],
                       ),
                     );
-                    
+
                     if (confirmed == true && context.mounted) {
-                      final deleteResume = ref.read(deleteResumeUseCaseProvider);
+                      final deleteResume = ref.read(
+                        deleteResumeUseCaseProvider,
+                      );
                       final result = await deleteResume(resumeId: resume.id);
-                      
+
                       result.fold(
                         (failure) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Failed to delete: ${failure.toString()}'),
+                              content: Text(
+                                'Failed to delete: ${failure.toString()}',
+                              ),
                               backgroundColor: AppColors.error,
                             ),
                           );
@@ -125,7 +124,6 @@ class ResumeCard extends ConsumerWidget {
                               backgroundColor: AppColors.success,
                             ),
                           );
-                          // Refresh the resumes list
                           ref.read(allResumesProvider.notifier).refresh();
                         },
                       );

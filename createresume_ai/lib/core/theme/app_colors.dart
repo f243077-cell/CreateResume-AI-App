@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Named color constants for the CreateResume AI navy/blue palette.
+/// Named color constants for the CreateResume AI navy/blue palette,
+/// plus the new Burnt Orange / Vanilla accent palette for the UI redesign.
 abstract final class AppColors {
   // ── Primary Navy ──────────────────────────────────────────────────
   static const navy900 = Color(0xFF0A1128);
@@ -15,6 +16,17 @@ abstract final class AppColors {
   static const blue200 = Color(0xFF93C5FD);
   static const blue100 = Color(0xFFDBEAFE);
   static const blue50 = Color(0xFFEFF6FF);
+
+  // ── New Palette: Burnt Orange / Vanilla ────────────────────────────
+  static const burntOrange = Color(0xFFFC6226);
+  static const burntOrangeDark = Color(0xFFE0501A); // pressed/hover state
+  static const burntOrangeLight = Color(
+    0xFFFF8A5C,
+  ); // lighter tint for gradients
+  static const vanilla = Color(0xFFFFF4D6);
+  static const vanillaDark = Color(
+    0xFFFCE9B8,
+  ); // slightly deeper for contrast needs
 
   // ── Surfaces ──────────────────────────────────────────────────────
   static const surfaceLight = Color(0xFFF8FAFC);

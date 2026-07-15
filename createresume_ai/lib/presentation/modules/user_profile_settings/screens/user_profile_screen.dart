@@ -1,40 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../../../application/providers/app_theme_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../presentation/widgets/subscription_navigation.dart';
 import '../providers/user_profile_notifier.dart';
 
-class UserProfileScreen extends ConsumerWidget {
+/// Same deep warm background used on Home Dashboard and All Resumes,
+/// for visual consistency across the main tabs.
+const Color _screenBg = Color(0xFF3D2418);
+
+class UserProfileScreen extends ConsumerStatefulWidget {
   const UserProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UserProfileScreen> createState() => _UserProfileScreenState();
+}
+
+class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
+  dynamic _cachedProfile;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLoading =
-        ref.watch(userProfileProvider.select((s) => s.isLoading));
-    final profile =
-        ref.watch(userProfileProvider.select((s) => s.profile));
-    final themeMode = ref.watch(appThemeProvider);
-    final selectedStyle = profile?.aiWritingStyle ?? 'Professional';
+    final isLoading = ref.watch(userProfileProvider.select((s) => s.isLoading));
+    final profile = ref.watch(userProfileProvider.select((s) => s.profile));
+    if (profile != null) {
+      _cachedProfile = profile;
+    }
+    final displayProfile = profile ?? _cachedProfile;
+    final selectedStyle = displayProfile?.aiWritingStyle ?? 'Professional';
 
     ref.listen<UserProfileState>(userProfileProvider, (prev, next) {
       if (next.error != null && next.error != prev?.error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     });
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: _screenBg,
       appBar: AppBar(
-        title: const Text('Profile & Settings'),
+        backgroundColor: _screenBg,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'Profile & Settings',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
+        elevation: 0,
       ),
-      body: isLoading && profile == null
-          ? const Center(child: CircularProgressIndicator())
+      body: isLoading && displayProfile == null
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.burntOrange),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -44,19 +65,54 @@ class UserProfileScreen extends ConsumerWidget {
                   Center(
                     child: Stack(
                       children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: AppColors.blue400.withValues(alpha: 0.2),
-                          backgroundImage: profile?.photoUrl != null
-                              ? _cachedProfileImage(
-                                  context,
-                                  profile!.photoUrl!,
-                                )
-                              : null,
-                          child: profile?.photoUrl == null
-                              ? const Icon(Icons.person_rounded, size: 50, color: AppColors.blue400)
-                              : null,
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.burntOrange,
+                              width: 2,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: AppColors.burntOrange.withValues(
+                              alpha: 0.2,
+                            ),
+                            backgroundImage: displayProfile?.photoUrl != null
+                                ? _cachedProfileImage(
+                                    context,
+                                    displayProfile!.photoUrl!,
+                                  )
+                                : null,
+                            child: displayProfile?.photoUrl == null
+                                ? const Icon(
+                                    Icons.person_rounded,
+                                    size: 50,
+                                    color: AppColors.burntOrange,
+                                  )
+                                : null,
+                          ),
                         ),
+                        if (isLoading && displayProfile != null)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Center(
+                                child: SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         Positioned(
                           bottom: 0,
                           right: 0,
@@ -65,15 +121,21 @@ class UserProfileScreen extends ConsumerWidget {
                             label: 'Update profile photo',
                             child: GestureDetector(
                               onTap: () {
-                                ref.read(userProfileProvider.notifier).updateProfilePhoto();
+                                ref
+                                    .read(userProfileProvider.notifier)
+                                    .updateProfilePhoto();
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: const BoxDecoration(
-                                  color: AppColors.navy800,
+                                  color: AppColors.burntOrange,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.camera_alt_rounded, color: AppColors.white, size: 16),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: AppColors.white,
+                                  size: 16,
+                                ),
                               ),
                             ),
                           ),
@@ -83,15 +145,22 @@ class UserProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    profile?.fullName ?? 'User Name',
+                    displayProfile?.fullName ?? 'User Name',
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    profile?.email ?? 'email@example.com',
+                    displayProfile?.email ?? 'email@example.com',
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 32),
 
@@ -99,27 +168,41 @@ class UserProfileScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
+                      color: AppColors.vanilla,
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.navy800,
+                            color: AppColors.burntOrange,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.star_rounded, color: Colors.amber, size: 24),
+                          child: const Icon(
+                            Icons.star_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Free Plan', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                              Text('${profile?.creditBalance ?? 0} AI Credits', style: theme.textTheme.bodySmall),
+                              Text(
+                                'Free Plan',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                '${displayProfile?.creditBalance ?? 0} AI Credits',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -129,8 +212,14 @@ class UserProfileScreen extends ConsumerWidget {
                           child: OutlinedButton(
                             onPressed: () => navigateToSubscription(context),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               minimumSize: const Size(0, 36),
+                              foregroundColor: AppColors.burntOrangeDark,
+                              side: const BorderSide(
+                                color: AppColors.burntOrange,
+                              ),
                             ),
                             child: const Text('Upgrade'),
                           ),
@@ -141,71 +230,93 @@ class UserProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 32),
 
                   // Edit Profile
-                  Card(
-                    child: Column(
-                      children: [
-                        Semantics(
-                          button: true,
-                          label: 'Edit name and email',
-                          child: ListTile(
-                            leading: const Icon(Icons.edit_rounded),
-                            title: const Text('Edit Name & Email'),
-                            trailing: const Icon(Icons.chevron_right_rounded),
-                            onTap: () => _showEditProfileDialog(context, ref, profile),
-                          ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceCard,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Semantics(
+                      button: true,
+                      label: 'Edit name and email',
+                      child: ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ],
+                        leading: const Icon(Icons.edit_rounded),
+                        title: const Text('Edit Name & Email'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => _showEditProfileDialog(
+                          context,
+                          ref,
+                          displayProfile,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
 
                   // Preferences
-                  Text('Preferences', style: theme.textTheme.labelLarge),
+                  Text(
+                    'Preferences',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  Card(
-                    child: Column(
-                      children: [
-                        SwitchListTile(
-                          title: const Text('Dark Mode'),
-                          secondary: const Icon(Icons.dark_mode_rounded),
-                          value: themeMode == ThemeMode.dark ||
-                              (themeMode == ThemeMode.system &&
-                                  MediaQuery.of(context).platformBrightness == Brightness.dark),
-                          onChanged: (val) {
-                            ref.read(appThemeProvider.notifier).toggleTheme();
-                          },
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceCard,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Semantics(
+                      button: true,
+                      label: 'Change AI writing style',
+                      child: ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        const Divider(height: 1),
-                        Semantics(
-                          button: true,
-                          label: 'Change AI writing style',
-                          child: ListTile(
-                            leading: const Icon(Icons.language_rounded),
-                            title: const Text('AI Writing Style'),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(selectedStyle, style: const TextStyle(color: AppColors.textTertiary)),
-                                const SizedBox(width: 4),
-                                const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
-                              ],
+                        leading: const Icon(Icons.language_rounded),
+                        title: const Text('AI Writing Style'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              selectedStyle,
+                              style: const TextStyle(
+                                color: AppColors.textTertiary,
+                              ),
                             ),
-                            onTap: () => _showWritingStyleDialog(context, ref),
-                          ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: AppColors.textTertiary,
+                            ),
+                          ],
                         ),
-                      ],
+                        onTap: () => _showWritingStyleDialog(context, ref),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
 
                   // Actions
-                  Card(
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceCard,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Column(
                       children: [
                         Semantics(
                           button: true,
                           label: 'Get help and support',
                           child: ListTile(
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                              ),
+                            ),
                             leading: const Icon(Icons.help_outline_rounded),
                             title: const Text('Help & Support'),
                             trailing: const Icon(Icons.chevron_right_rounded),
@@ -217,11 +328,27 @@ class UserProfileScreen extends ConsumerWidget {
                           button: true,
                           label: 'Sign out of account',
                           child: ListTile(
-                            leading: const Icon(Icons.logout_rounded, color: AppColors.error),
-                            title: const Text('Sign Out', style: TextStyle(color: AppColors.error)),
-                            onTap: isLoading ? null : () {
-                              ref.read(userProfileProvider.notifier).signOut();
-                            },
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              ),
+                            ),
+                            leading: const Icon(
+                              Icons.logout_rounded,
+                              color: AppColors.error,
+                            ),
+                            title: const Text(
+                              'Sign Out',
+                              style: TextStyle(color: AppColors.error),
+                            ),
+                            onTap: isLoading
+                                ? null
+                                : () {
+                                    ref
+                                        .read(userProfileProvider.notifier)
+                                        .signOut();
+                                  },
                           ),
                         ),
                       ],
@@ -235,16 +362,19 @@ class UserProfileScreen extends ConsumerWidget {
 
   ImageProvider _cachedProfileImage(BuildContext context, String url) {
     final cacheSize = (100 * MediaQuery.devicePixelRatioOf(context)).round();
-    return ResizeImage.resizeIfNeeded(
-      cacheSize,
-      cacheSize,
-      NetworkImage(url),
-    );
+    return ResizeImage.resizeIfNeeded(cacheSize, cacheSize, NetworkImage(url));
   }
 
   void _showWritingStyleDialog(BuildContext context, WidgetRef ref) {
-    final styles = ['Professional', 'Creative', 'Formal', 'Casual', 'Technical'];
-    final currentStyle = ref.read(userProfileProvider).profile?.aiWritingStyle ?? 'Professional';
+    final styles = [
+      'Professional',
+      'Creative',
+      'Formal',
+      'Casual',
+      'Technical',
+    ];
+    final currentStyle =
+        ref.read(userProfileProvider).profile?.aiWritingStyle ?? 'Professional';
     String selectedStyle = currentStyle;
 
     showDialog(
@@ -258,7 +388,7 @@ class UserProfileScreen extends ConsumerWidget {
               return ListTile(
                 title: Text(style),
                 trailing: selectedStyle == style
-                    ? const Icon(Icons.check, color: AppColors.navy800)
+                    ? const Icon(Icons.check, color: AppColors.burntOrange)
                     : null,
                 onTap: () {
                   setState(() {
@@ -276,9 +406,13 @@ class UserProfileScreen extends ConsumerWidget {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                ref.read(userProfileProvider.notifier).updateProfile(aiWritingStyle: selectedStyle);
+                ref
+                    .read(userProfileProvider.notifier)
+                    .updateProfile(aiWritingStyle: selectedStyle);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Writing style set to $selectedStyle')),
+                  SnackBar(
+                    content: Text('Writing style set to $selectedStyle'),
+                  ),
                 );
               },
               child: const Text('Save'),
@@ -314,8 +448,7 @@ class UserProfileScreen extends ConsumerWidget {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text('Email: support@createresume.ai'),
-              Text('Website: www.createresume.ai'),
+              Text('Email: tanzeelhussain346@gmail.com'),
             ],
           ),
         ),
@@ -360,9 +493,9 @@ class UserProfileScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () {
               if (nameController.text.isNotEmpty) {
-                ref.read(userProfileProvider.notifier).updateProfile(
-                  fullName: nameController.text,
-                );
+                ref
+                    .read(userProfileProvider.notifier)
+                    .updateProfile(fullName: nameController.text);
                 Navigator.pop(context);
               }
             },

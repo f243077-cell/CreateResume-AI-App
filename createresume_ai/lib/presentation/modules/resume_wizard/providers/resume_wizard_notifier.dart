@@ -67,8 +67,12 @@ class ResumeWizardNotifier extends Notifier<ResumeWizardState> {
   void updateCareerStage(CareerStage stage) =>
       state = state.copyWith(careerStage: stage);
 
-  void updateJobTitleAndIndustry(String title, String industry) => state =
-      state.copyWith(targetJobTitle: title, industry: industry);
+  void reset() {
+    state = const ResumeWizardState();
+  }
+
+  void updateJobTitleAndIndustry(String title, String industry) =>
+      state = state.copyWith(targetJobTitle: title, industry: industry);
 
   void updateJobDescription(String description) =>
       state = state.copyWith(jobDescription: description);
@@ -96,7 +100,10 @@ class ResumeWizardNotifier extends Notifier<ResumeWizardState> {
 
     final user = ref.read(authStateProvider).value;
     if (user == null) {
-      state = state.copyWith(isLoading: false, error: 'User not authenticated.');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'User not authenticated.',
+      );
       return null;
     }
 
@@ -156,5 +163,5 @@ class ResumeWizardNotifier extends Notifier<ResumeWizardState> {
 
 final resumeWizardProvider =
     NotifierProvider<ResumeWizardNotifier, ResumeWizardState>(
-  ResumeWizardNotifier.new,
-);
+      ResumeWizardNotifier.new,
+    );

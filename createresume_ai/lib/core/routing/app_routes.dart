@@ -5,6 +5,7 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const signup = '/signup';
   static const forgotPassword = '/forgot-password';
+  static const resetPassword = '/reset-password';
   static const home = '/home';
   static const resumeWizard = '/resume-wizard';
   static const resumeEditor = '/resume-editor';
@@ -15,8 +16,7 @@ abstract final class AppRoutes {
   static const subscription = '/subscription';
   static const templateSelection = '/template-selection';
 
-  static String resumeEditorPath(String resumeId) =>
-      '$resumeEditor/$resumeId';
+  static String resumeEditorPath(String resumeId) => '$resumeEditor/$resumeId';
 
   static String resumeAnalyzerPath(String resumeId) =>
       '$resumeAnalyzer/$resumeId';
@@ -31,6 +31,7 @@ abstract final class AppRouteNames {
   static const login = 'login';
   static const signup = 'signup';
   static const forgotPassword = 'forgotPassword';
+  static const resetPassword = 'resetPassword';
   static const home = 'home';
   static const resumeWizard = 'resumeWizard';
   static const resumeEditor = 'resumeEditor';

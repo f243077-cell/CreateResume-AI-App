@@ -27,6 +27,19 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
   final _descriptionController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Ensure a completely fresh wizard every time this screen is entered —
+    // without this, a previously generated resume or stale form state can
+    // leak in and make the "Generate Resume" button appear to do nothing
+    // on a second attempt.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(resumeGenerationProvider.notifier).reset();
+      ref.invalidate(resumeWizardProvider);
+    });
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     _titleController.dispose();
@@ -141,7 +154,9 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
           child: LinearProgressIndicator(
             value: (currentIndex + 1) / _totalPages,
             backgroundColor: AppColors.surfaceCard,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.blue400),
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              AppColors.burntOrange,
+            ),
           ),
         ),
       ),
@@ -220,12 +235,12 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppColors.blue100
+                          ? AppColors.vanilla
                           : theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
-                            ? AppColors.blue400
+                            ? AppColors.burntOrange
                             : AppColors.border,
                         width: isSelected ? 2 : 1,
                       ),
@@ -235,7 +250,7 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
                         Icon(
                           Icons.work_history_rounded,
                           color: isSelected
-                              ? AppColors.navy800
+                              ? AppColors.burntOrangeDark
                               : AppColors.textSecondary,
                         ),
                         const SizedBox(width: 16),
@@ -246,7 +261,7 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
                                 ? FontWeight.bold
                                 : FontWeight.normal,
                             color: isSelected
-                                ? AppColors.navy800
+                                ? AppColors.burntOrangeDark
                                 : theme.textTheme.bodyMedium?.color,
                           ),
                         ),
@@ -395,7 +410,7 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
 
   Widget _buildLoadingOverlay(ThemeData theme) {
     return Container(
-      color: AppColors.navy800.withValues(alpha: 0.9),
+      color: AppColors.burntOrangeDark.withValues(alpha: 0.92),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -405,7 +420,7 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
               height: 48,
               child: CircularProgressIndicator(
                 strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.vanilla),
               ),
             ),
             const SizedBox(height: 24),
@@ -517,8 +532,8 @@ class _WizardBottomControls extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(26),
                 ),
-                backgroundColor: isLastStep ? AppColors.gold : null,
-                foregroundColor: isLastStep ? AppColors.navy800 : null,
+                backgroundColor: AppColors.burntOrange,
+                foregroundColor: AppColors.white,
               ),
             ),
           ),

@@ -8,33 +8,47 @@ import '../../../../domain/entities/resume.dart';
 import '../providers/all_resumes_notifier.dart';
 import '../widgets/resume_card.dart';
 
+/// Same deep warm background used on the Home Dashboard, for visual
+/// consistency across the main tabs.
+const Color _screenBg = Color(0xFF3D2418);
+
 class AllResumesScreen extends ConsumerWidget {
   const AllResumesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final resumesAsync = ref.watch(allResumesProvider);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('All Resumes'), centerTitle: true),
+      backgroundColor: _screenBg,
+      appBar: AppBar(
+        backgroundColor: _screenBg,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'All Resumes',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        elevation: 0,
+      ),
       body: resumesAsync.when(
         loading: () => _buildLoading(),
         error: (error, stack) => _buildError(context, ref, error.toString()),
-        data: (state) => _buildContent(context, ref, theme, state.resumes),
+        data: (state) => _buildContent(context, ref, state.resumes),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.pushNamed(AppRouteNames.resumeWizard),
         icon: const Icon(Icons.add),
         label: const Text('New Resume'),
-        backgroundColor: AppColors.navy800,
+        backgroundColor: AppColors.burntOrange,
       ),
     );
   }
 
   Widget _buildLoading() {
-    return const Center(child: CircularProgressIndicator());
+    return const Center(
+      child: CircularProgressIndicator(color: AppColors.burntOrange),
+    );
   }
 
   Widget _buildError(BuildContext context, WidgetRef ref, String error) {
@@ -48,7 +62,11 @@ class AllResumesScreen extends ConsumerWidget {
             color: AppColors.error,
           ),
           const SizedBox(height: 16),
-          Text('Error loading resumes: $error'),
+          Text(
+            'Error loading resumes: $error',
+            style: const TextStyle(color: Colors.white),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => ref.read(allResumesProvider.notifier).refresh(),
@@ -62,7 +80,6 @@ class AllResumesScreen extends ConsumerWidget {
   Widget _buildContent(
     BuildContext context,
     WidgetRef ref,
-    ThemeData theme,
     List<Resume> resumes,
   ) {
     if (resumes.isEmpty) {
@@ -72,16 +89,27 @@ class AllResumesScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.note_add_rounded,
-                size: 64,
-                color: AppColors.textTertiary,
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.vanilla,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.note_add_rounded,
+                  size: 40,
+                  color: AppColors.burntOrange,
+                ),
               ),
-              const SizedBox(height: 16),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 "You haven't created any resumes yet.",
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
@@ -96,6 +124,7 @@ class AllResumesScreen extends ConsumerWidget {
     }
 
     return RefreshIndicator(
+      color: AppColors.burntOrange,
       onRefresh: () => ref.read(allResumesProvider.notifier).refresh(),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),

@@ -1,7 +1,9 @@
+// File: lib/presentation/modules/onboarding/onboarding_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../../../core/routing/app_routes.dart';
@@ -46,7 +48,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  void _onNext() {
+  Future<void> _markSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('seen_onboarding', true);
+  }
+
+  Future<void> _onNext() async {
     final currentIndex = ref.read(onboardingProvider);
     if (currentIndex < _slides.length - 1) {
       _pageController.nextPage(
@@ -54,83 +61,103 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      context.goNamed(AppRouteNames.login);
+      await _markSeen();
+      if (mounted) context.goNamed(AppRouteNames.login);
     }
   }
 
-  void _onSkip() {
-    context.goNamed(AppRouteNames.login);
+  Future<void> _onSkip() async {
+    await _markSeen();
+    if (mounted) context.goNamed(AppRouteNames.login);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final currentIndex = ref.watch(onboardingProvider);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Skip Button Row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Semantics(
-                    button: true,
-                    label: 'Skip onboarding',
-                    child: TextButton(
-                      onPressed: _onSkip,
-                      child: const Text('Skip'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // PageView
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  ref.read(onboardingProvider.notifier).setPage(index);
-                },
-                children: _slides,
-              ),
-            ),
-
-            // Bottom Controls
-            Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                children: [
-                  SmoothPageIndicator(
-                    controller: _pageController,
-                    count: _slides.length,
-                    effect: const ExpandingDotsEffect(
-                      dotHeight: 8,
-                      dotWidth: 8,
-                      activeDotColor: AppColors.navy800,
-                      dotColor: AppColors.border,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Semantics(
-                    button: true,
-                    label: currentIndex == _slides.length - 1 ? 'Get started' : 'Next step',
-                    child: ElevatedButton(
-                      onPressed: _onNext,
-                      child: Text(
-                        currentIndex == _slides.length - 1 ? 'Get Started' : 'Next Step',
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.vanilla, AppColors.surfaceLight],
+            stops: [0.0, 0.6],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Skip Button
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Semantics(
+                      button: true,
+                      label: 'Skip onboarding',
+                      child: TextButton(
+                        onPressed: _onSkip,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.burntOrange,
+                        ),
+                        child: const Text('Skip'),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+
+              // PageView
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    ref.read(onboardingProvider.notifier).setPage(index);
+                  },
+                  children: _slides,
+                ),
+              ),
+
+              // Bottom Controls
+              Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  children: [
+                    SmoothPageIndicator(
+                      controller: _pageController,
+                      count: _slides.length,
+                      effect: const ExpandingDotsEffect(
+                        dotHeight: 8,
+                        dotWidth: 8,
+                        activeDotColor: AppColors.burntOrange,
+                        dotColor: AppColors.border,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Semantics(
+                      button: true,
+                      label: currentIndex == _slides.length - 1
+                          ? 'Get started'
+                          : 'Next step',
+                      child: ElevatedButton(
+                        onPressed: _onNext,
+                        child: Text(
+                          currentIndex == _slides.length - 1
+                              ? 'Get Started'
+                              : 'Next Step',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -13,7 +13,7 @@ class MinimalTemplate implements ResumeTemplateBase {
   static const PdfColor _darkGrey  = PdfColor.fromInt(0xFF333333);
   static const PdfColor _midGrey   = PdfColor.fromInt(0xFF666666);
   static const PdfColor _sectionBg = PdfColor.fromInt(0xFFEFEFEF);
-  static const PdfColor _divider   = PdfColor.fromInt(0xFFCCCCCC);
+ 
 
   /// Replaces Unicode punctuation/symbols that the default PDF font can't
   /// render with safe ASCII equivalents, then strips any remaining

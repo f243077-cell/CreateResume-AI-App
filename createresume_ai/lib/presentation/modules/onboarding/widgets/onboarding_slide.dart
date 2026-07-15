@@ -14,7 +14,7 @@ class OnboardingSlide extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
-    this.iconBgColor = AppColors.blue100,
+    this.iconBgColor = AppColors.vanilla,
   });
 
   @override
@@ -31,7 +31,7 @@ class OnboardingSlide extends StatelessWidget {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: iconBgColor.withValues(alpha: 0.15),
+              color: iconBgColor.withValues(alpha: 0.6),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -42,12 +42,12 @@ class OnboardingSlide extends StatelessWidget {
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppColors.navy800, AppColors.navy500],
+                    colors: [AppColors.burntOrange, AppColors.burntOrangeDark],
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.navy800.withValues(alpha: 0.3),
+                      color: AppColors.burntOrange.withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),

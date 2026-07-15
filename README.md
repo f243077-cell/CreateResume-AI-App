@@ -104,13 +104,7 @@ The app follows Clean Architecture principles:
 - **Presentation layer** consumes domain interfaces through Riverpod providers/notifiers, keeping UI decoupled from backend implementation details.
 
 State is managed with Riverpod notifiers per feature module, and navigation is handled via `go_router` with a shell route providing persistent bottom navigation.
-
-## Roadmap
-
-- [ ] Cover letter generation
-- [ ] Resume-to-job ATS scoring
-- [ ] Additional export formats
-- [ ] Team/collaboration features
+am/collaboration features
 
 ## Author
 

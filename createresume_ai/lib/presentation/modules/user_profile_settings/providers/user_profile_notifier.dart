@@ -36,7 +36,7 @@ class UserProfileNotifier extends Notifier<UserProfileState> {
   }
 
   Future<void> _loadProfile() async {
-    final userAuth = ref.watch(authStateProvider).value;
+    final userAuth = ref.read(authStateProvider).value;
     if (userAuth == null) {
       state = const UserProfileState(error: 'Not authenticated');
       return;
@@ -76,7 +76,11 @@ class UserProfileNotifier extends Notifier<UserProfileState> {
         } else {
           state = state.copyWith(isLoading: false);
         }
-        ref.invalidate(authStateProvider); // ← add this line
+        // homeDashboardProvider now fetches the full profile (including
+        // photoUrl) directly via getUserProfileUseCaseProvider instead of
+        // relying on authStateProvider's cached snapshot — so invalidating
+        // authStateProvider is no longer needed, and avoids forcing
+        // routerProvider (which watches it) to rebuild the whole app.
         ref.invalidate(homeDashboardProvider);
       },
     );
@@ -104,7 +108,6 @@ class UserProfileNotifier extends Notifier<UserProfileState> {
       (l) => state = state.copyWith(isLoading: false, error: l.message),
       (updatedProfile) {
         state = state.copyWith(isLoading: false, profile: updatedProfile);
-        ref.invalidate(authStateProvider); // ← add this line
         ref.invalidate(homeDashboardProvider);
       },
     );

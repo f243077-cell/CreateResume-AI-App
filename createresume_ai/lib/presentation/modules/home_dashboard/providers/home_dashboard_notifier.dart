@@ -18,8 +18,7 @@ class HomeDashboardState {
   });
 }
 
-class HomeDashboardNotifier
-    extends AsyncNotifier<HomeDashboardState> {
+class HomeDashboardNotifier extends AsyncNotifier<HomeDashboardState> {
   @override
   Future<HomeDashboardState> build() async {
     return _fetchData();
@@ -27,10 +26,11 @@ class HomeDashboardNotifier
 
   Future<HomeDashboardState> _fetchData() async {
     final getResumes = ref.watch(getResumesUseCaseProvider);
-    final user = await ref.watch(authStateProvider.future);
+    final getProfile = ref.watch(getUserProfileUseCaseProvider);
+    final authUser = await ref.watch(authStateProvider.future);
     final isConnected = await ref.watch(connectivityProvider.future);
 
-    if (user == null) {
+    if (authUser == null) {
       return HomeDashboardState(
         user: null,
         recentResumes: [],
@@ -38,7 +38,17 @@ class HomeDashboardNotifier
       );
     }
 
-    final resumeResult = await getResumes(userId: user.id);
+    // Fetch the full, up-to-date profile (including photoUrl) directly from
+    // the profiles table — the same source the Settings screen uses. This
+    // avoids depending on authStateProvider's cached snapshot, which only
+    // refreshes on real auth events (sign in/out), not on profile edits.
+    final profileResult = await getProfile(userId: authUser.id);
+    final user = profileResult.fold(
+      (failure) => authUser,
+      (profile) => profile,
+    );
+
+    final resumeResult = await getResumes(userId: authUser.id);
 
     final List<Resume> resumes = resumeResult.fold((failure) => [], (resumes) {
       final sorted = List<Resume>.from(resumes)
