@@ -95,10 +95,17 @@ The JSON must have exactly this structure:
     // Try multiple free models in sequence — free-tier providers can be
     // intermittently rate-limited or unavailable, so we fall back rather
     // than fail on the first hiccup.
-    const modelsToTry = [
-      'openai/gpt-oss-20b:free',
-      'meta-llama/llama-3.3-70b-instruct:free',
-      'qwen/qwen-2.5-7b-instruct:free',
+    // Free model IDs change often (the previous three stopped being free),
+    // so the list can be replaced without a code change:
+    // `supabase secrets set AI_MODELS=modelA,modelB,modelC`.
+    const modelsFromEnv = (Deno.env.get('AI_MODELS') ?? '')
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean)
+    const modelsToTry = modelsFromEnv.length > 0 ? modelsFromEnv : [
+      'google/gemma-4-31b-it:free',
+      'nvidia/nemotron-3-super-120b-a12b:free',
+      'qwen/qwen3.8-27b:free',
     ]
 
     let openRouterData: any = null
