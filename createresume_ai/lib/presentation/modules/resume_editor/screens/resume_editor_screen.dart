@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/constants/template_ids.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/education.dart';
 import '../../../../domain/entities/project.dart';
@@ -40,8 +41,8 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
     // once, right after the resume finishes loading — this is what the
     // navigation query parameter was for, but was previously never read.
     ref.listen(resumeEditorProvider(widget.resumeId), (previous, next) {
-      final incomingTemplateId = widget.initialTemplateId;
-      if (_hasAppliedInitialTemplate || incomingTemplateId == null) return;
+      if (_hasAppliedInitialTemplate || widget.initialTemplateId == null) return;
+      final incomingTemplateId = TemplateIds.normalize(widget.initialTemplateId);
 
       next.whenData((resume) {
         if (resume.templateId != incomingTemplateId) {
@@ -831,16 +832,16 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
   }
 
   IconData _getTemplateIcon(String templateId) {
-    switch (templateId) {
-      case 'classic_style1':
+    switch (TemplateIds.normalize(templateId)) {
+      case TemplateIds.classic:
         return Icons.description_rounded;
-      case 'modern_style1':
+      case TemplateIds.modern:
         return Icons.view_column_rounded;
-      case 'minimal_style1':
+      case TemplateIds.minimal:
         return Icons.minimize_rounded;
-      case 'executive_style1':
+      case TemplateIds.executive:
         return Icons.workspace_premium_rounded;
-      case 'executive_style2':
+      case TemplateIds.executive2:
         return Icons.diamond_rounded;
       default:
         return Icons.description_rounded;

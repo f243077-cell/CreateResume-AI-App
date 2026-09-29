@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import '../../../../application/providers/auth_state_provider.dart';
+import '../../../../core/constants/template_ids.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../domain/entities/resume.dart';
 import '../../../../infrastructure/services/local_pdf_generator_service.dart';
@@ -75,7 +76,7 @@ class ResumeEditorNotifier extends StateNotifier<AsyncValue<Resume>> {
       final pdfBytes = await pdfService.generatePdf(
         resume: currentResume,
         user: user,
-        templateId: currentResume.templateId ?? 'modern',
+        templateId: TemplateIds.normalize(currentResume.templateId),
       );
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/${currentResume.title}.pdf');

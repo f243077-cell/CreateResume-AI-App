@@ -19,7 +19,4 @@ abstract class IResumeRepository {
 
   /// Deletes a resume by its [id].
   Future<Either<Failure, void>> deleteResume(String id);
-
-  /// Returns the list of available resume template identifiers.
-  Future<Either<Failure, List<String>>> getTemplates();
 }

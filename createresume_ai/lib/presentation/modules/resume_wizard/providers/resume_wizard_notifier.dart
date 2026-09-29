@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/providers/auth_state_provider.dart';
+import '../../../../core/constants/template_ids.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../domain/entities/resume.dart';
@@ -121,7 +122,7 @@ class ResumeWizardNotifier extends Notifier<ResumeWizardState> {
       description: state.jobDescription,
       careerStage: state.careerStage!.name,
       jobTitle: state.targetJobTitle,
-      templateId: state.templateId ?? 'modern',
+      templateId: state.templateId ?? TemplateIds.classic,
     );
 
     return await contentResult.fold(

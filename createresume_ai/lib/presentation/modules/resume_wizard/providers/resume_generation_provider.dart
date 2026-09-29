@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../application/providers/auth_state_provider.dart';
 import '../../../../application/use_cases/resume/generate_resume_with_ai_use_case.dart';
 import '../../../../app_router.dart';
+import '../../../../core/constants/template_ids.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/routing/app_routes.dart';
@@ -62,7 +63,7 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
         description: description,
         careerStage: careerStage,
         jobTitle: jobTitle,
-        templateId: templateId ?? 'modern',
+        templateId: templateId ?? TemplateIds.classic,
         userId: user.id,
       );
 

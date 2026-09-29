@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/template_ids.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/template_selection_notifier.dart';
 
@@ -53,17 +54,17 @@ class TemplateSelectionScreen extends ConsumerWidget {
 
     final categoryStyles = {
       'classic': [
-        {'id': 'classic', 'name': 'Classic Style'},
+        {'id': TemplateIds.classic, 'name': 'Classic Style'},
       ],
       'modern': [
-        {'id': 'modern', 'name': 'Modern Style'},
+        {'id': TemplateIds.modern, 'name': 'Modern Style'},
       ],
       'minimal': [
-        {'id': 'minimal', 'name': 'Minimal Style'},
+        {'id': TemplateIds.minimal, 'name': 'Minimal Style'},
       ],
       'executive': [
-        {'id': 'executive', 'name': 'Executive v1'},
-        {'id': 'executive2', 'name': 'Executive v2'},
+        {'id': TemplateIds.executive, 'name': 'Executive v1'},
+        {'id': TemplateIds.executive2, 'name': 'Executive v2'},
       ],
     };
 

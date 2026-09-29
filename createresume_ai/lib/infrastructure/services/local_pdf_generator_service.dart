@@ -1,3 +1,4 @@
+import '../../core/constants/template_ids.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/entities/resume.dart';
 import 'templates/resume_template_base.dart';
@@ -11,8 +12,8 @@ class LocalPdfGeneratorService {
   /// Generate PDF bytes from a Resume entity using the selected template.
   /// Combines Resume entity with User entity for personal information.
   ///
-  /// templateId: 'classic_style1' | 'modern_style1' | 'minimal_style1' |
-  ///             'executive_style1' | 'executive_style2'
+  /// templateId: any ID accepted by [TemplateIds.normalize]; unknown IDs
+  /// render with the Classic template.
   Future<List<int>> generatePdf({
     required Resume resume,
     required User user,
@@ -32,13 +33,12 @@ class LocalPdfGeneratorService {
       projects: resume.projects,
     );
 
-    final ResumeTemplateBase template = switch (templateId) {
-      'classic_style1' => ClassicTemplate(),
-      'modern_style1' => ModernTemplate(),
-      'minimal_style1' => MinimalTemplate(),
-      'executive_style1' => ExecutiveTemplate(),
-      'executive_style2' => Executive2Template(),
-      _ => ClassicTemplate(), // fallback default
+    final ResumeTemplateBase template = switch (TemplateIds.normalize(templateId)) {
+      TemplateIds.modern => ModernTemplate(),
+      TemplateIds.minimal => MinimalTemplate(),
+      TemplateIds.executive => ExecutiveTemplate(),
+      TemplateIds.executive2 => Executive2Template(),
+      _ => ClassicTemplate(),
     };
 
     final doc = await template.generate(resumeData);
@@ -48,27 +48,27 @@ class LocalPdfGeneratorService {
   /// Returns all available template IDs with display names for UI picker
   static List<Map<String, String>> get availableTemplates => [
     {
-      'id': 'classic_style1',
+      'id': TemplateIds.classic,
       'name': 'Classic',
       'description': 'Traditional corporate look — dark header, clean sections',
     },
     {
-      'id': 'modern_style1',
+      'id': TemplateIds.modern,
       'name': 'Modern',
       'description': 'Two-column layout — navy sidebar with skill bars',
     },
     {
-      'id': 'minimal_style1',
+      'id': TemplateIds.minimal,
       'name': 'Minimal',
       'description': 'Ultra-clean — white space, typography-focused',
     },
     {
-      'id': 'executive_style1',
+      'id': TemplateIds.executive,
       'name': 'Executive',
       'description': 'Premium feel — gold accents, card-based experience',
     },
     {
-      'id': 'executive_style2',
+      'id': TemplateIds.executive2,
       'name': 'Executive 2',
       'description': 'Two-column layout — teal sidebar with skill bars',
     },

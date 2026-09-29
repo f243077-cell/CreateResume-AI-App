@@ -214,19 +214,6 @@ class SupabaseResumeRepository implements IResumeRepository {
     }
   }
 
-  @override
-  Future<Either<Failure, List<String>>> getTemplates() async {
-    try {
-      final data = await _db.from('templates').select('id');
-      final ids = (data as List<dynamic>)
-          .map((e) => (e as Map<String, dynamic>)['id'] as String)
-          .toList();
-      return Right(ids);
-    } catch (e) {
-      return Left(ServerFailure('Failed to fetch templates: $e'));
-    }
-  }
-
   // ── Assembly ──────────────────────────────────────────────────────
 
   Resume _assembleResume(Map<String, dynamic> data) {
