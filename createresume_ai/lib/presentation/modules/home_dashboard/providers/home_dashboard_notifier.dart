@@ -27,8 +27,10 @@ class HomeDashboardNotifier extends AsyncNotifier<HomeDashboardState> {
   Future<HomeDashboardState> _fetchData() async {
     final getResumes = ref.watch(getResumesUseCaseProvider);
     final getProfile = ref.watch(getUserProfileUseCaseProvider);
+    // Read, not watch: a connectivity change must not refetch the profile and
+    // all resumes. The offline banner watches connectivityProvider directly.
+    final isConnected = ref.read(connectivityProvider).value ?? true;
     final authUser = await ref.watch(authStateProvider.future);
-    final isConnected = await ref.watch(connectivityProvider.future);
 
     if (authUser == null) {
       return HomeDashboardState(
