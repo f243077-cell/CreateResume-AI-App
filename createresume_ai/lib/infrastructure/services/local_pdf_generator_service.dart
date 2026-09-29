@@ -19,18 +19,28 @@ class LocalPdfGeneratorService {
     required User user,
     required String templateId,
   }) async {
-    // Create ResumeData by combining Resume and User entities
+    // Create ResumeData by combining Resume and User entities.
+    // Blank strings become null so templates never render empty sections.
     final resumeData = ResumeData(
       fullName: user.fullName,
-      jobTitle: null, // Job title would need to be stored separately
+      jobTitle: _nonBlank(user.jobTitle) ?? _nonBlank(resume.title),
       email: user.email,
-      phone: null, // Phone would need to be stored in User profile
-      location: null, // Location would need to be stored in User profile
-      summary: null, // Summary would need to be stored in Resume
-      workExperiences: resume.workExperiences,
-      educations: resume.educations,
-      skills: resume.skills,
-      projects: resume.projects,
+      phone: _nonBlank(user.phone),
+      location: _nonBlank(user.location),
+      summary: _nonBlank(resume.summary),
+      linkedin: _nonBlank(user.linkedin),
+      github: _nonBlank(user.github),
+      leetcode: _nonBlank(user.leetcode),
+      workExperiences: [...resume.workExperiences]
+        ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex)),
+      educations: [...resume.educations]
+        ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex)),
+      skills: [...resume.skills]
+        ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex)),
+      projects: [...resume.projects]
+        ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex)),
+      honors: [...resume.honors]
+        ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex)),
     );
 
     final ResumeTemplateBase template = switch (TemplateIds.normalize(templateId)) {
@@ -43,6 +53,12 @@ class LocalPdfGeneratorService {
 
     final doc = await template.generate(resumeData);
     return doc.save();
+  }
+
+  static String? _nonBlank(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   /// Returns all available template IDs with display names for UI picker

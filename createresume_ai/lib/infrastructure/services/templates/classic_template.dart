@@ -188,16 +188,8 @@ class ClassicTemplate implements ResumeTemplateBase {
   // ── SKILLS AS CATEGORIZED RUNNING TEXT ──────────────────────────────
 
   pw.Widget _skillsRunningText(List<Skill> skills) {
-    final Map<String, List<Skill>> grouped = {};
-    for (final s in skills) {
-      final key = (s.category == null || s.category!.trim().isEmpty)
-          ? 'Other'
-          : s.category!.trim();
-      grouped.putIfAbsent(key, () => []).add(s);
-    }
-
     final rows = <pw.Widget>[];
-    grouped.forEach((category, items) {
+    groupSkillsByCategory(skills).forEach((category, items) {
       final names = items.map((s) => s.name).join(', ');
       rows.add(
         pw.Padding(

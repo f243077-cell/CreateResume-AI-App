@@ -10,6 +10,7 @@ import '../../../domain/entities/work_experience.dart';
 import '../../../domain/entities/education.dart';
 import '../../../domain/entities/skill.dart';
 import '../../../domain/entities/project.dart';
+import '../../../domain/entities/honor.dart';
 import 'resume_template_base.dart';
 
 class ModernTemplate implements ResumeTemplateBase {
@@ -106,6 +107,9 @@ class ModernTemplate implements ResumeTemplateBase {
                   _sideLine('Email:', resume.email),
                   if (resume.phone != null) _sideLine('Phone:', resume.phone!),
                   if (resume.location != null) _sideLine('Location:', resume.location!),
+                  if (resume.linkedin != null) _sideLine('LinkedIn:', resume.linkedin!),
+                  if (resume.github != null) _sideLine('GitHub:', resume.github!),
+                  if (resume.leetcode != null) _sideLine('LeetCode:', resume.leetcode!),
 
                   pw.SizedBox(height: 16),
                   _sideDivider(),
@@ -124,7 +128,13 @@ class ModernTemplate implements ResumeTemplateBase {
                   // Skills
                   if (resume.skills.isNotEmpty) ...[
                     _sideHeader('SKILLS'),
-                    ...resume.skills.map((s) => _sideSkillItem(s)),
+                    for (final entry in groupSkillsByCategory(resume.skills).entries) ...[
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.only(bottom: 4),
+                        child: pw.Text(_sanitize(entry.key), style: const pw.TextStyle(fontSize: 7.5, color: _accent)),
+                      ),
+                      ...entry.value.map((s) => _sideSkillItem(s)),
+                    ],
                   ],
                 ],
               ),
@@ -154,6 +164,12 @@ class ModernTemplate implements ResumeTemplateBase {
                     if (resume.educations.isNotEmpty) ...[
                       _mainSectionHeader('EDUCATION'),
                       ...resume.educations.map((e) => _eduBlock(e)),
+                    ],
+
+                    if (resume.honors.isNotEmpty) ...[
+                      pw.SizedBox(height: 10),
+                      _mainSectionHeader('HONORS & AWARDS'),
+                      ...resume.honors.map((h) => _honorBlock(h)),
                     ],
                   ],
                 ),
@@ -342,6 +358,40 @@ class ModernTemplate implements ResumeTemplateBase {
                 : _sanitize(edu.institution),
             style: const pw.TextStyle(fontSize: 9, color: _midGrey),
           ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _honorBlock(Honor honor) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(left: 34, bottom: 4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('-  ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
+          pw.Expanded(
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: _sanitize(honor.title),
+                    style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: _black),
+                  ),
+                  if (honor.description != null && honor.description!.isNotEmpty)
+                    pw.TextSpan(
+                      text: ' - ${_sanitize(honor.description!)}',
+                      style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (honor.certificateUrl != null && honor.certificateUrl!.isNotEmpty)
+            pw.UrlLink(
+              destination: honor.certificateUrl!,
+              child: pw.Text('View Certificate', style: const pw.TextStyle(fontSize: 8.5, color: _accent)),
+            ),
         ],
       ),
     );

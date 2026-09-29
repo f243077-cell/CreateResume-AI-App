@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../../../domain/entities/work_experience.dart';
 import '../../../domain/entities/education.dart';
 import '../../../domain/entities/project.dart';
+import '../../../domain/entities/honor.dart';
 import 'resume_template_base.dart';
 
 class ExecutiveTemplate implements ResumeTemplateBase {
@@ -87,6 +88,9 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                       _headerContact('Email:', resume.email),
                       if (resume.phone != null) _headerContact('Phone:', resume.phone!),
                       if (resume.location != null) _headerContact('Location:', resume.location!),
+                      if (resume.linkedin != null) _headerContact('LinkedIn:', resume.linkedin!),
+                      if (resume.github != null) _headerContact('GitHub:', resume.github!),
+                      if (resume.leetcode != null) _headerContact('LeetCode:', resume.leetcode!),
                     ],
                   ),
                 ),
@@ -104,17 +108,23 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                 // Summary
                 if (resume.summary != null) ...[
                   _sectionTitle('Professional Summary'),
+                  // Rounded fill and left accent are separate decorations:
+                  // the pdf package rejects borderRadius on a one-sided Border.
                   pw.Container(
                     width: double.infinity,
-                    padding: const pw.EdgeInsets.all(12),
                     decoration: pw.BoxDecoration(
                       color: _lightGold,
                       borderRadius: pw.BorderRadius.circular(4),
-                      border: pw.Border(left: pw.BorderSide(color: _gold, width: 3)),
                     ),
-                    child: pw.Text(
-                      _sanitize(resume.summary!),
-                      style: const pw.TextStyle(fontSize: 10, lineSpacing: 1.6, color: _textGrey),
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(12),
+                      decoration: const pw.BoxDecoration(
+                        border: pw.Border(left: pw.BorderSide(color: _gold, width: 3)),
+                      ),
+                      child: pw.Text(
+                        _sanitize(resume.summary!),
+                        style: const pw.TextStyle(fontSize: 10, lineSpacing: 1.6, color: _textGrey),
+                      ),
                     ),
                   ),
                   pw.SizedBox(height: 18),
@@ -137,18 +147,35 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                 // Skills
                 if (resume.skills.isNotEmpty) ...[
                   _sectionTitle('Core Skills'),
-                  pw.Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: resume.skills.map((s) => _goldChip(_sanitize(s.name))).toList(),
-                  ),
-                  pw.SizedBox(height: 18),
+                  for (final entry in groupSkillsByCategory(resume.skills).entries) ...[
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 5),
+                      child: pw.Text(
+                        _sanitize(entry.key),
+                        style: pw.TextStyle(fontSize: 10, color: _navy, fontWeight: pw.FontWeight.bold),
+                      ),
+                    ),
+                    pw.Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: entry.value.map((s) => _goldChip(_sanitize(s.name))).toList(),
+                    ),
+                    pw.SizedBox(height: 10),
+                  ],
+                  pw.SizedBox(height: 8),
                 ],
 
                 // Projects
                 if (resume.projects.isNotEmpty) ...[
                   _sectionTitle('Notable Projects'),
                   ...resume.projects.map((p) => _projectCard(p)),
+                ],
+
+                // Honors
+                if (resume.honors.isNotEmpty) ...[
+                  pw.SizedBox(height: 6),
+                  _sectionTitle('Honors & Awards'),
+                  ...resume.honors.map((h) => _honorBlock(h)),
                 ],
               ],
             ),
@@ -321,46 +348,84 @@ class ExecutiveTemplate implements ResumeTemplateBase {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 12),
       child: pw.Container(
-        padding: const pw.EdgeInsets.all(12),
-        decoration: pw.BoxDecoration(
+        decoration: const pw.BoxDecoration(
           color: _lightGold,
-          borderRadius: const pw.BorderRadius.only(
+          borderRadius: pw.BorderRadius.only(
             topRight: pw.Radius.circular(5),
             bottomRight: pw.Radius.circular(5),
           ),
-          border: pw.Border(left: pw.BorderSide(color: _gold, width: 3)),
         ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(_sanitize(proj.name), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _navy)),
-                if (proj.url != null && proj.url!.isNotEmpty)
-                  pw.Text(_sanitize(proj.url!), style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
+        child: pw.Container(
+          padding: const pw.EdgeInsets.all(12),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(left: pw.BorderSide(color: _gold, width: 3)),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(_sanitize(proj.name), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _navy)),
+                  if (proj.url != null && proj.url!.isNotEmpty)
+                    pw.Text(_sanitize(proj.url!), style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
+                ],
+              ),
+              if (proj.techStack.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                pw.Wrap(
+                  spacing: 4,
+                  children: proj.techStack.map((t) => pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: pw.BoxDecoration(color: _navy, borderRadius: pw.BorderRadius.circular(3)),
+                    child: pw.Text(_sanitize(t), style: const pw.TextStyle(fontSize: 7.5, color: _white)),
+                  )).toList(),
+                ),
               ],
-            ),
-            if (proj.techStack.isNotEmpty) ...[
-              pw.SizedBox(height: 4),
-              pw.Wrap(
-                spacing: 4,
-                children: proj.techStack.map((t) => pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                  decoration: pw.BoxDecoration(color: _navy, borderRadius: pw.BorderRadius.circular(3)),
-                  child: pw.Text(_sanitize(t), style: const pw.TextStyle(fontSize: 7.5, color: _white)),
-                )).toList(),
-              ),
+              if (proj.description.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  _sanitize(proj.description),
+                  style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _textGrey),
+                ),
+              ],
             ],
-            if (proj.description.isNotEmpty) ...[
-              pw.SizedBox(height: 4),
-              pw.Text(
-                _sanitize(proj.description),
-                style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.4, color: _textGrey),
-              ),
-            ],
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  pw.Widget _honorBlock(Honor honor) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(left: 8, bottom: 4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('- ', style: pw.TextStyle(fontSize: 8.5, color: _gold)),
+          pw.Expanded(
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: _sanitize(honor.title),
+                    style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: _navy),
+                  ),
+                  if (honor.description != null && honor.description!.isNotEmpty)
+                    pw.TextSpan(
+                      text: ' - ${_sanitize(honor.description!)}',
+                      style: const pw.TextStyle(fontSize: 9.5, color: _textGrey),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (honor.certificateUrl != null && honor.certificateUrl!.isNotEmpty)
+            pw.UrlLink(
+              destination: honor.certificateUrl!,
+              child: pw.Text('View Certificate', style: const pw.TextStyle(fontSize: 8.5, color: _gold)),
+            ),
+        ],
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../../../domain/entities/work_experience.dart';
 import '../../../domain/entities/education.dart';
 import '../../../domain/entities/skill.dart';
 import '../../../domain/entities/project.dart';
+import '../../../domain/entities/honor.dart';
 import 'resume_template_base.dart';
 
 class Executive2Template implements ResumeTemplateBase {
@@ -103,7 +104,21 @@ class Executive2Template implements ResumeTemplateBase {
                 // ── SKILLS (4-column grid) ──────────────────
                 if (resume.skills.isNotEmpty) ...[
                   _sectionHeader('SKILLS'),
-                  _skillsGrid(resume.skills),
+                  for (final entry in groupSkillsByCategory(resume.skills).entries) ...[
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 3),
+                      child: pw.Text(_sanitize(entry.key), style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: _black)),
+                    ),
+                    _skillsGrid(entry.value),
+                    pw.SizedBox(height: 4),
+                  ],
+                ],
+
+                // ── HONORS & AWARDS ─────────────────────────
+                if (resume.honors.isNotEmpty) ...[
+                  pw.SizedBox(height: 6),
+                  _sectionHeader('HONORS & AWARDS'),
+                  ...resume.honors.map((h) => _honorBlock(h)),
                 ],
               ],
             ),
@@ -120,6 +135,9 @@ class Executive2Template implements ResumeTemplateBase {
     if (resume.location != null) parts.add(resume.location!);
     parts.add(resume.phone ?? '');
     parts.add(resume.email);
+    if (resume.linkedin != null) parts.add('LinkedIn: ${resume.linkedin}');
+    if (resume.github != null) parts.add('GitHub: ${resume.github}');
+    if (resume.leetcode != null) parts.add('LeetCode: ${resume.leetcode}');
     return parts.where((p) => p.isNotEmpty).join('  .  ');
   }
 
@@ -237,6 +255,40 @@ class Executive2Template implements ResumeTemplateBase {
             edu.endDate != null ? '${_monthName(edu.endDate!.month)} ${edu.endDate!.year}' : '',
             style: const pw.TextStyle(fontSize: 9, color: _midGrey),
           ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _honorBlock(Honor honor) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(left: 12, bottom: 4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('-  ', style: const pw.TextStyle(fontSize: 9, color: _darkGrey)),
+          pw.Expanded(
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: _sanitize(honor.title),
+                    style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: _black),
+                  ),
+                  if (honor.description != null && honor.description!.isNotEmpty)
+                    pw.TextSpan(
+                      text: ' - ${_sanitize(honor.description!)}',
+                      style: const pw.TextStyle(fontSize: 9, color: _darkGrey),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (honor.certificateUrl != null && honor.certificateUrl!.isNotEmpty)
+            pw.UrlLink(
+              destination: honor.certificateUrl!,
+              child: pw.Text('View Certificate', style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
+            ),
         ],
       ),
     );

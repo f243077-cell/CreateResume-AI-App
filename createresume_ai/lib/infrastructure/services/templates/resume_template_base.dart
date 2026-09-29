@@ -40,6 +40,19 @@ class ResumeData {
   });
 }
 
+/// Groups skills by category, preserving first-seen category order.
+/// Skills without a category are grouped under "Other".
+Map<String, List<Skill>> groupSkillsByCategory(List<Skill> skills) {
+  final Map<String, List<Skill>> grouped = {};
+  for (final s in skills) {
+    final key = (s.category == null || s.category!.trim().isEmpty)
+        ? 'Other'
+        : s.category!.trim();
+    grouped.putIfAbsent(key, () => []).add(s);
+  }
+  return grouped;
+}
+
 abstract class ResumeTemplateBase {
   Future<pw.Document> generate(ResumeData resume);
 }

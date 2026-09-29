@@ -6,6 +6,8 @@
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../../../domain/entities/honor.dart';
+import '../../../domain/entities/skill.dart';
 import 'resume_template_base.dart';
 
 class MinimalTemplate implements ResumeTemplateBase {
@@ -111,7 +113,22 @@ class MinimalTemplate implements ResumeTemplateBase {
           if (resume.skills.isNotEmpty) ...[
             _sectionBar('KEY SKILLS'),
             pw.SizedBox(height: 8),
-            _skillsGrid(resume.skills),
+            for (final entry in groupSkillsByCategory(resume.skills).entries) ...[
+              pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 3),
+                child: pw.Text(_sanitize(entry.key), style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: _black)),
+              ),
+              _skillsGrid(entry.value),
+              pw.SizedBox(height: 4),
+            ],
+          ],
+
+          // ── HONORS & AWARDS ───────────────────────────────
+          if (resume.honors.isNotEmpty) ...[
+            pw.SizedBox(height: 10),
+            _sectionBar('HONORS & AWARDS'),
+            pw.SizedBox(height: 8),
+            ...resume.honors.map((h) => _honorItem(h)),
           ],
         ],
       ),
@@ -124,6 +141,9 @@ class MinimalTemplate implements ResumeTemplateBase {
     final parts = <String>[resume.email];
     if (resume.phone != null) parts.add(resume.phone!);
     if (resume.location != null) parts.add(resume.location!);
+    if (resume.linkedin != null) parts.add('LinkedIn: ${resume.linkedin}');
+    if (resume.github != null) parts.add('GitHub: ${resume.github}');
+    if (resume.leetcode != null) parts.add('LeetCode: ${resume.leetcode}');
     return parts.join('  |  ');
   }
 
@@ -235,7 +255,41 @@ class MinimalTemplate implements ResumeTemplateBase {
     );
   }
 
-  pw.Widget _skillsGrid(List<dynamic> skills) {
+  pw.Widget _honorItem(Honor honor) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(left: 10, bottom: 4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('-  ', style: const pw.TextStyle(fontSize: 9, color: _darkGrey)),
+          pw.Expanded(
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: _sanitize(honor.title),
+                    style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: _black),
+                  ),
+                  if (honor.description != null && honor.description!.isNotEmpty)
+                    pw.TextSpan(
+                      text: ' - ${_sanitize(honor.description!)}',
+                      style: const pw.TextStyle(fontSize: 9, color: _darkGrey),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (honor.certificateUrl != null && honor.certificateUrl!.isNotEmpty)
+            pw.UrlLink(
+              destination: honor.certificateUrl!,
+              child: pw.Text('View Certificate', style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _skillsGrid(List<Skill> skills) {
     final rows = <pw.Widget>[];
     for (int i = 0; i < skills.length; i += 3) {
       final rowSkills = skills.sublist(i, i + 3 > skills.length ? skills.length : i + 3);
