@@ -3,54 +3,98 @@ import 'package:dartz/dartz.dart';
 import '../../../core/errors/failures.dart';
 import '../../../domain/entities/user.dart';
 import '../../../domain/repositories/i_user_profile_repository.dart';
+import '../../../domain/services/i_ai_content_generator.dart';
 
-/// Runs an AI tool, deducting one credit and returning generated text.
+/// Input for one AI Tool Library tool.
+sealed class AiToolRequest {
+  const AiToolRequest();
+}
+
+/// Bullet Rewriter: one resume bullet.
+final class BulletRewriteRequest extends AiToolRequest {
+  final String bullet;
+  const BulletRewriteRequest(this.bullet);
+}
+
+/// Skill Gap Analyzer: the user's skills against a job posting.
+final class SkillGapRequest extends AiToolRequest {
+  final String skills;
+  final String jobDescription;
+  const SkillGapRequest({required this.skills, required this.jobDescription});
+}
+
+/// Cover Letter: company, job title and the candidate's background.
+final class CoverLetterRequest extends AiToolRequest {
+  final String companyName;
+  final String jobTitle;
+  final String background;
+  const CoverLetterRequest({
+    required this.companyName,
+    required this.jobTitle,
+    required this.background,
+  });
+}
+
+/// Runs an AI tool and charges [creditCost] credit only after the AI
+/// returned a result, so a failed call costs nothing.
 class RunAiToolUseCase {
-  final IUserProfileRepository _userProfileRepository;
+  static const creditCost = 1;
 
-  const RunAiToolUseCase(this._userProfileRepository);
+  final IUserProfileRepository _userProfileRepository;
+  final IAIContentGenerator _aiContentGenerator;
+
+  const RunAiToolUseCase(this._userProfileRepository, this._aiContentGenerator);
 
   Future<Either<Failure, ({User profile, String resultText})>> call({
     required String userId,
-    required String toolName,
-    required String input,
+    required AiToolRequest request,
   }) async {
     final profileResult = await _userProfileRepository.getProfile(userId);
 
     return profileResult.fold(
       Left.new,
       (user) async {
-        if (user.creditBalance <= 0) {
+        if (user.creditBalance < creditCost) {
           return Left(InsufficientCreditsFailure(
-            requested: 1,
+            requested: creditCost,
             available: user.creditBalance,
           ));
         }
 
-        final deductResult = await _userProfileRepository.deductCredits(
-          userId: userId,
-          amount: 1,
-        );
+        final aiResult = await _generate(request);
 
-        return deductResult.fold(
-          Left.new,
-          (updatedProfile) => Right((
-            profile: updatedProfile,
-            resultText: _mockResult(toolName),
-          )),
-        );
+        return aiResult.fold(Left.new, (resultText) async {
+          final deductResult = await _userProfileRepository.deductCredits(
+            userId: userId,
+            amount: creditCost,
+          );
+          return deductResult.fold(
+            Left.new,
+            (updatedProfile) => Right((
+              profile: updatedProfile,
+              resultText: resultText,
+            )),
+          );
+        });
       },
     );
   }
 
-  String _mockResult(String toolName) {
-    switch (toolName) {
-      case 'Bullet Rewriter':
-        return 'Optimized bullet point: Successfully led a cross-functional team of 10 to deliver a 25% increase in core metrics.';
-      case 'Skill Gap Analyzer':
-        return 'Based on your input, you should consider learning React, Node.js, and CI/CD pipelines.';
-      default:
-        return 'Dear Hiring Manager,\n\nI am thrilled to apply for the position... [Cover Letter generated]';
-    }
+  Future<Either<Failure, String>> _generate(AiToolRequest request) {
+    return switch (request) {
+      BulletRewriteRequest(:final bullet) =>
+        _aiContentGenerator.rewriteBullet(bullet),
+      SkillGapRequest(:final skills, :final jobDescription) =>
+        _aiContentGenerator.analyzeSkillGap(
+          skills: skills,
+          jobDescription: jobDescription,
+        ),
+      CoverLetterRequest(:final companyName, :final jobTitle, :final background) =>
+        _aiContentGenerator.generateCoverLetter(
+          resumeSummary: background,
+          companyName: companyName,
+          jobTitle: jobTitle,
+        ),
+    };
   }
 }

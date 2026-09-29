@@ -18,4 +18,18 @@ abstract class IAIContentGenerator {
 
   /// Rewrites a single bullet point for clarity and impact.
   Future<Either<Failure, String>> rewriteBullet(String text);
+
+  /// Writes a cover letter from the candidate's background.
+  Future<Either<Failure, String>> generateCoverLetter({
+    required String resumeSummary,
+    required String companyName,
+    required String jobTitle,
+  });
+
+  /// Compares the candidate's [skills] with a [jobDescription] and describes
+  /// matching and missing skills.
+  Future<Either<Failure, String>> analyzeSkillGap({
+    required String skills,
+    required String jobDescription,
+  });
 }

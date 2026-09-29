@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/providers/auth_state_provider.dart';
+import '../../../../application/use_cases/user/run_ai_tool_use_case.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../domain/entities/user.dart';
@@ -57,7 +58,7 @@ class AiToolNotifier extends Notifier<AiToolState> {
     );
   }
 
-  Future<void> runTool(String toolName, String input) async {
+  Future<void> runTool(AiToolRequest request) async {
     state = state.copyWith(isLoading: true, error: null, resultText: null);
 
     final user = ref.read(authStateProvider).value;
@@ -69,8 +70,7 @@ class AiToolNotifier extends Notifier<AiToolState> {
     final runToolUseCase = ref.read(runAiToolUseCaseProvider);
     final result = await runToolUseCase.call(
       userId: user.id,
-      toolName: toolName,
-      input: input,
+      request: request,
     );
 
     result.fold(

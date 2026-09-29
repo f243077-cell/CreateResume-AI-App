@@ -44,56 +44,12 @@ class AiService implements IAIContentGenerator {
   }
 
   @override
-  Future<Either<Failure, String>> improveSection(String text) async {
-    try {
-      final response = await _invokeWithRetry(
-        functionName: 'improve-section',
-        body: {'text': text},
-      );
-
-      final data = _asMap(response);
-      final improved = data['improved_text'];
-      if (improved is String) {
-        return Right(improved);
-      }
-      return Left(
-        ServerFailure(
-          data['error'] as String? ??
-              'Unexpected response shape from improve-section: ${data.keys}',
-        ),
-      );
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Failed to improve section: $e'));
-    }
-  }
+  Future<Either<Failure, String>> improveSection(String text) =>
+      _runAiTool('improve_text', {'text': text});
 
   @override
-  Future<Either<Failure, String>> rewriteBullet(String text) async {
-    try {
-      final response = await _invokeWithRetry(
-        functionName: 'rewrite-bullet',
-        body: {'text': text},
-      );
-
-      final data = _asMap(response);
-      final rewritten = data['rewritten_text'];
-      if (rewritten is String) {
-        return Right(rewritten);
-      }
-      return Left(
-        ServerFailure(
-          data['error'] as String? ??
-              'Unexpected response shape from rewrite-bullet: ${data.keys}',
-        ),
-      );
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Failed to rewrite bullet: $e'));
-    }
-  }
+  Future<Either<Failure, String>> rewriteBullet(String text) =>
+      _runAiTool('rewrite_bullet', {'text': text});
 
   /// Generate a complete resume from a user description via AI.
   /// Calls the 'dynamic-api' Edge Function.
@@ -150,42 +106,58 @@ class AiService implements IAIContentGenerator {
     return rewriteBullet(bulletPoint);
   }
 
-  /// Generate a cover letter using AI.
-  /// Calls the 'generate-cover-letter' Edge Function.
+  @override
   Future<Either<Failure, String>> generateCoverLetter({
     required String resumeSummary,
     required String companyName,
     required String jobTitle,
-  }) async {
+  }) =>
+      _runAiTool('cover_letter', {
+        'resumeSummary': resumeSummary,
+        'companyName': companyName,
+        'jobTitle': jobTitle,
+      });
+
+  @override
+  Future<Either<Failure, String>> analyzeSkillGap({
+    required String skills,
+    required String jobDescription,
+  }) =>
+      _runAiTool('skill_gap', {
+        'skills': skills,
+        'jobDescription': jobDescription,
+      });
+
+  // ── Helpers ────────────────────────────────────────────────────────
+
+  /// Runs one action of the 'ai-tools' Edge Function and returns its text.
+  Future<Either<Failure, String>> _runAiTool(
+    String action,
+    Map<String, dynamic> fields,
+  ) async {
     try {
       final response = await _invokeWithRetry(
-        functionName: 'generate-cover-letter',
-        body: {
-          'resume_summary': resumeSummary,
-          'company_name': companyName,
-          'job_title': jobTitle,
-        },
+        functionName: 'ai-tools',
+        body: {'action': action, ...fields},
       );
 
       final data = _asMap(response);
-      final coverLetter = data['cover_letter'];
-      if (coverLetter is String) {
-        return Right(coverLetter);
+      final result = data['result'];
+      if (data['success'] == true && result is String && result.trim().isNotEmpty) {
+        return Right(result.trim());
       }
       return Left(
         ServerFailure(
           data['error'] as String? ??
-              'Unexpected response shape from generate-cover-letter: ${data.keys}',
+              'Unexpected response shape from ai-tools ($action): ${data.keys}',
         ),
       );
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(ServerFailure('Failed to generate cover letter: $e'));
+      return Left(ServerFailure('AI request failed: $e'));
     }
   }
-
-  // ── Helpers ────────────────────────────────────────────────────────
 
   /// Normalizes an Edge Function response into a `Map<String, dynamic>`,
   /// whether it arrives as a raw JSON string or already-decoded map.

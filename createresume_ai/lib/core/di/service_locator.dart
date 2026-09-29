@@ -137,7 +137,10 @@ final updateUserProfileUseCaseProvider = Provider<UpdateUserProfileUseCase>(
 );
 
 final runAiToolUseCaseProvider = Provider<RunAiToolUseCase>(
-  (ref) => RunAiToolUseCase(ref.watch(userProfileRepositoryProvider)),
+  (ref) => RunAiToolUseCase(
+    ref.watch(userProfileRepositoryProvider),
+    ref.watch(aiContentGeneratorProvider),
+  ),
 );
 
 final getResumesUseCaseProvider = Provider<GetResumesUseCase>(

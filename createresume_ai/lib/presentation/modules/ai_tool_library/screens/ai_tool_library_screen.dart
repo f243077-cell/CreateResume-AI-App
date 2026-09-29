@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../application/use_cases/user/run_ai_tool_use_case.dart';
 import '../../../../presentation/widgets/subscription_navigation.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/ai_tool_notifier.dart';
@@ -125,6 +126,7 @@ class AiToolLibraryScreen extends ConsumerWidget {
                           _buildToolCard(
                             context,
                             ref,
+                            tool: _AiTool.bulletRewriter,
                             title: 'Bullet Rewriter',
                             icon: Icons.edit_note_rounded,
                             color: AppColors.success,
@@ -133,6 +135,7 @@ class AiToolLibraryScreen extends ConsumerWidget {
                           _buildToolCard(
                             context,
                             ref,
+                            tool: _AiTool.skillGapAnalyzer,
                             title: 'Skill Gap Analyzer',
                             icon: Icons.track_changes_rounded,
                             color: AppColors.warning,
@@ -141,6 +144,7 @@ class AiToolLibraryScreen extends ConsumerWidget {
                           _buildToolCard(
                             context,
                             ref,
+                            tool: _AiTool.coverLetter,
                             title: 'Cover Letter GPT',
                             icon: Icons.mark_email_read_rounded,
                             color: AppColors.blue400,
@@ -157,6 +161,7 @@ class AiToolLibraryScreen extends ConsumerWidget {
   Widget _buildToolCard(
     BuildContext context,
     WidgetRef ref, {
+    required _AiTool tool,
     required String title,
     required IconData icon,
     required Color color,
@@ -168,7 +173,7 @@ class AiToolLibraryScreen extends ConsumerWidget {
         button: true,
         label: 'Use $title tool',
         child: InkWell(
-          onTap: () => _showToolInputSheet(context, ref, title),
+          onTap: () => _showToolInputSheet(context, tool, title),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -202,61 +207,11 @@ class AiToolLibraryScreen extends ConsumerWidget {
     );
   }
 
-  void _showToolInputSheet(BuildContext context, WidgetRef ref, String toolName) {
-    final controller = TextEditingController();
-
+  void _showToolInputSheet(BuildContext context, _AiTool tool, String toolName) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, child) {
-            final isLoading =
-                ref.watch(aiToolProvider.select((s) => s.isLoading));
-            
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 24,
-                right: 24,
-                top: 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(toolName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: controller,
-                    maxLines: 5,
-                    decoration: const InputDecoration(
-                      hintText: 'Paste your text or job description here...',
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Semantics(
-                    button: true,
-                    label: 'Run $toolName tool',
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : () {
-                        if (controller.text.isNotEmpty) {
-                          ref.read(aiToolProvider.notifier).runTool(toolName, controller.text);
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: isLoading 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
-                        : const Text('Run Tool (1 Credit)'),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            );
-          }
-        );
-      },
+      builder: (context) => _ToolInputSheet(tool: tool, toolName: toolName),
     );
   }
 
@@ -276,6 +231,120 @@ class AiToolLibraryScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+enum _AiTool { bulletRewriter, skillGapAnalyzer, coverLetter }
+
+/// One input on a tool's sheet.
+class _ToolField {
+  final String label;
+  final String hint;
+  final int maxLines;
+  const _ToolField(this.label, this.hint, {this.maxLines = 1});
+}
+
+/// Collects the inputs a tool needs and starts it. Owns its controllers.
+class _ToolInputSheet extends ConsumerStatefulWidget {
+  final _AiTool tool;
+  final String toolName;
+
+  const _ToolInputSheet({required this.tool, required this.toolName});
+
+  @override
+  ConsumerState<_ToolInputSheet> createState() => _ToolInputSheetState();
+}
+
+class _ToolInputSheetState extends ConsumerState<_ToolInputSheet> {
+  late final List<_ToolField> _fields = switch (widget.tool) {
+    _AiTool.bulletRewriter => const [
+        _ToolField('Bullet point', 'Paste one bullet from your resume...', maxLines: 4),
+      ],
+    _AiTool.skillGapAnalyzer => const [
+        _ToolField('Your skills', 'e.g. Flutter, Dart, Firebase, REST APIs', maxLines: 3),
+        _ToolField('Target job description', 'Paste the job description here...', maxLines: 6),
+      ],
+    _AiTool.coverLetter => const [
+        _ToolField('Company', 'e.g. Acme Corp'),
+        _ToolField('Job title', 'e.g. Senior Flutter Developer'),
+        _ToolField('About you', 'Paste your resume summary or key experience...', maxLines: 5),
+      ],
+  };
+
+  late final List<TextEditingController> _controllers =
+      List.generate(_fields.length, (_) => TextEditingController());
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  bool get _isComplete => _controllers.every((c) => c.text.trim().isNotEmpty);
+
+  AiToolRequest _buildRequest() {
+    final v = _controllers.map((c) => c.text.trim()).toList();
+    return switch (widget.tool) {
+      _AiTool.bulletRewriter => BulletRewriteRequest(v[0]),
+      _AiTool.skillGapAnalyzer => SkillGapRequest(skills: v[0], jobDescription: v[1]),
+      _AiTool.coverLetter =>
+        CoverLetterRequest(companyName: v[0], jobTitle: v[1], background: v[2]),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLoading = ref.watch(aiToolProvider.select((s) => s.isLoading));
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(widget.toolName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            for (var i = 0; i < _fields.length; i++) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _controllers[i],
+                maxLines: _fields[i].maxLines,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: _fields[i].label,
+                  hintText: _fields[i].hint,
+                  alignLabelWithHint: _fields[i].maxLines > 1,
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            Semantics(
+              button: true,
+              label: 'Run ${widget.toolName} tool',
+              child: ElevatedButton(
+                onPressed: (isLoading || !_isComplete)
+                    ? null
+                    : () {
+                        ref.read(aiToolProvider.notifier).runTool(_buildRequest());
+                        Navigator.pop(context);
+                      },
+                child: isLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
+                    : const Text('Run Tool (1 Credit)'),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
