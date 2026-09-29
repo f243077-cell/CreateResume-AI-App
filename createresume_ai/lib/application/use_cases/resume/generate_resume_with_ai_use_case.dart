@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/errors/exceptions.dart';
 import '../../../core/errors/failures.dart';
+import '../../../core/utils/resume_date_parser.dart';
 import '../../../domain/entities/education.dart';
 import '../../../domain/entities/honor.dart';
 import '../../../domain/entities/project.dart';
@@ -86,63 +87,64 @@ class GenerateResumeWithAIUseCase {
   }) {
     final now = DateTime.now();
 
+    // orderIndex follows the AI's list order so the saved order is stable.
     final workExperiences =
-        (aiData['workExperiences'] as List<dynamic>?)?.map<WorkExperience>((
-          exp,
+        _asMaps(aiData['workExperiences']).asMap().entries.map<WorkExperience>((
+          e,
         ) {
-          final expData = exp as Map<String, dynamic>;
+          final expData = e.value;
+          // A current role has no end date; "Present" as endDate also means current.
+          final isCurrent = expData['isCurrently'] == true ||
+              ResumeDateParser.isPresent(expData['endDate']);
           return WorkExperience(
             id: _uuid.v4(),
             resumeId: '',
             company: expData['company'] as String? ?? '',
             role: expData['role'] as String? ?? '',
-            startDate: _parseDate(expData['startDate']),
-            endDate: _parseDate(expData['endDate']),
-            isCurrent: expData['isCurrently'] as bool? ?? false,
+            startDate: ResumeDateParser.parse(expData['startDate']) ?? now,
+            endDate: isCurrent ? null : ResumeDateParser.parse(expData['endDate']),
+            isCurrent: isCurrent,
             description: expData['description'] as String? ?? '',
-            orderIndex: 0,
+            orderIndex: e.key,
           );
-        }).toList() ??
-        [];
+        }).toList();
 
     final educations =
-        (aiData['educations'] as List<dynamic>?)?.map<Education>((edu) {
-          final eduData = edu as Map<String, dynamic>;
+        _asMaps(aiData['educations']).asMap().entries.map<Education>((e) {
+          final eduData = e.value;
           return Education(
             id: _uuid.v4(),
             resumeId: '',
             institution: eduData['institution'] as String? ?? '',
             degree: eduData['degree'] as String? ?? '',
             field: eduData['field'] as String? ?? '',
-            startDate: _parseDate(eduData['startDate']),
-            endDate: _parseDate(eduData['endDate']),
+            startDate: ResumeDateParser.parse(eduData['startDate']) ?? now,
+            endDate: ResumeDateParser.parse(eduData['endDate']),
             gpa: _parseGpa(eduData['gpa']),
-            orderIndex: 0,
+            orderIndex: e.key,
           );
-        }).toList() ??
-        [];
+        }).toList();
 
     // Map skills — now reads `category` from the AI response so the PDF
     // template can group skills as "Languages: Go, Python, C++" instead
     // of a flat bulleted list. Falls back to null if the AI didn't
     // provide one (template groups these under "Other").
     final skills =
-        (aiData['skills'] as List<dynamic>?)?.map<Skill>((skill) {
-          final skillData = skill as Map<String, dynamic>;
+        _asMaps(aiData['skills']).asMap().entries.map<Skill>((e) {
+          final skillData = e.value;
           return Skill(
             id: _uuid.v4(),
             resumeId: '',
             name: skillData['name'] as String? ?? '',
             level: skillData['level'] as String?,
             category: skillData['category'] as String?,
-            orderIndex: 0,
+            orderIndex: e.key,
           );
-        }).toList() ??
-        [];
+        }).toList();
 
     final projects =
-        (aiData['projects'] as List<dynamic>?)?.map<Project>((proj) {
-          final projData = proj as Map<String, dynamic>;
+        _asMaps(aiData['projects']).asMap().entries.map<Project>((e) {
+          final projData = e.value;
           return Project(
             id: _uuid.v4(),
             resumeId: '',
@@ -154,25 +156,23 @@ class GenerateResumeWithAIUseCase {
                     .toList() ??
                 [],
             url: projData['url'] as String?,
-            orderIndex: 0,
+            orderIndex: e.key,
           );
-        }).toList() ??
-        [];
+        }).toList();
 
     // Map honors/awards, if the AI response includes any.
     final honors =
-        (aiData['honors'] as List<dynamic>?)?.map<Honor>((honor) {
-          final honorData = honor as Map<String, dynamic>;
+        _asMaps(aiData['honors']).asMap().entries.map<Honor>((e) {
+          final honorData = e.value;
           return Honor(
             id: _uuid.v4(),
             resumeId: '',
             title: honorData['title'] as String? ?? '',
             description: honorData['description'] as String?,
             certificateUrl: honorData['certificateUrl'] as String?,
-            orderIndex: 0,
+            orderIndex: e.key,
           );
-        }).toList() ??
-        [];
+        }).toList();
 
     return Resume(
       id: _uuid.v4(),
@@ -193,38 +193,10 @@ class GenerateResumeWithAIUseCase {
     );
   }
 
-  DateTime _parseDate(dynamic date) {
-    if (date == null) return DateTime.now();
-    if (date is DateTime) return date;
-    if (date is String) {
-      final parts = date.split(' ');
-      if (parts.length == 2) {
-        return DateTime(int.parse(parts[1]), _monthToNumber(parts[0]));
-      }
-      if (parts.length == 1 && parts[0].length == 4) {
-        return DateTime(int.parse(parts[0]));
-      }
-    }
-    return DateTime.now();
-  }
-
-  int _monthToNumber(String month) {
-    final months = {
-      'jan': 1,
-      'feb': 2,
-      'mar': 3,
-      'apr': 4,
-      'may': 5,
-      'jun': 6,
-      'jul': 7,
-      'aug': 8,
-      'sep': 9,
-      'oct': 10,
-      'nov': 11,
-      'dec': 12,
-    };
-    final key = month.substring(0, 3).toLowerCase();
-    return months[key] ?? 1;
+  /// Returns the map entries of an AI list field, skipping malformed items.
+  List<Map<String, dynamic>> _asMaps(dynamic list) {
+    if (list is! List) return const [];
+    return list.whereType<Map<String, dynamic>>().toList();
   }
 
   double? _parseGpa(dynamic gpa) {

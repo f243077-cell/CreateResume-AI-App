@@ -62,8 +62,8 @@ The JSON must have exactly this structure:
   workExperiences: [{
     company: string,
     role: string,
-    startDate: string,
-    endDate: string,
+    startDate: string ('YYYY-MM') or null if unknown,
+    endDate: string ('YYYY-MM') or null if isCurrently is true or unknown,
     isCurrently: boolean,
     description: string (5-7 detailed bullet points as a single string separated by newlines, each starting with a strong action verb; describe the specific systems, scale, technologies, and responsibilities involved; include a quantified result — metrics, percentage, dollar amount, scale, or time saved — ONLY where the user's description reasonably supports one; otherwise focus on technical depth and scope rather than fabricating a number)
   }],
@@ -71,8 +71,8 @@ The JSON must have exactly this structure:
     institution: string,
     degree: string,
     field: string,
-    startDate: string,
-    endDate: string,
+    startDate: string ('YYYY-MM') or null if unknown,
+    endDate: string ('YYYY-MM') or null if unknown,
     gpa: string
   }],
   projects: [{
