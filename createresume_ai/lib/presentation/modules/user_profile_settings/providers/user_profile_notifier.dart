@@ -90,18 +90,33 @@ class UserProfileNotifier extends Notifier<UserProfileState> {
     String? fullName,
     String? email,
     String? aiWritingStyle,
+    String? phone,
+    String? location,
+    String? jobTitle,
+    String? linkedin,
+    String? github,
+    String? leetcode,
   }) async {
     final userAuth = ref.read(authStateProvider).value;
     if (userAuth == null) return;
 
     state = state.copyWith(isLoading: true, error: null);
 
+    // Base the update on the loaded profile: the auth snapshot has no contact
+    // fields, and the repository writes every column, so using it would wipe
+    // phone, location and links on every name change.
     final updateProfile = ref.read(updateUserProfileUseCaseProvider);
     final result = await updateProfile(
-      user: userAuth,
+      user: state.profile ?? userAuth,
       fullName: fullName,
       email: email,
       aiWritingStyle: aiWritingStyle,
+      phone: phone,
+      location: location,
+      jobTitle: jobTitle,
+      linkedin: linkedin,
+      github: github,
+      leetcode: leetcode,
     );
 
     result.fold(

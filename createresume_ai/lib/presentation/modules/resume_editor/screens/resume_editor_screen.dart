@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/template_ids.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -13,7 +12,9 @@ import '../../../../domain/entities/work_experience.dart';
 import '../../../../infrastructure/services/local_pdf_generator_service.dart';
 import '../providers/resume_editor_notifier.dart';
 import '../widgets/editor_section.dart';
+import '../widgets/forms/editor_dialogs.dart';
 import '../widgets/forms/work_experience_form.dart';
+import '../widgets/summary_editor_card.dart';
 
 class ResumeEditorScreen extends ConsumerStatefulWidget {
   final String resumeId;
@@ -72,7 +73,7 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
           ),
         ),
         title: const Text(
-          'CRAFT RESUME AI',
+          'CreateResume AI',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -108,8 +109,15 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
             button: true,
             label: 'Export resume as PDF',
             child: OutlinedButton(
-              onPressed: () {
-                ref.read(resumeEditorProvider(widget.resumeId).notifier).exportPdf();
+              onPressed: () async {
+                final error = await ref
+                    .read(resumeEditorProvider(widget.resumeId).notifier)
+                    .exportPdf();
+                if (error != null && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(error), backgroundColor: AppColors.error),
+                  );
+                }
               },
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -123,11 +131,19 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
             button: true,
             label: 'Save resume to cloud',
             child: ElevatedButton(
-              onPressed: () {
-                ref.read(resumeEditorProvider(widget.resumeId).notifier).saveToCloud();
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Saved to Cloud')));
+              onPressed: () async {
+                final saved = await ref
+                    .read(resumeEditorProvider(widget.resumeId).notifier)
+                    .saveToCloud();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  saved
+                      ? const SnackBar(content: Text('Saved to Cloud'))
+                      : const SnackBar(
+                          content: Text('Could not save. Check your connection and try again.'),
+                          backgroundColor: AppColors.error,
+                        ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -156,8 +172,21 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Resume title
+                  _buildTitleSection(context, ref, resume, theme),
+
+                  const SizedBox(height: 16),
+
                   // Professional Summary section
-                  _buildSummarySection(context, ref, resume, theme),
+                  SummaryEditorCard(
+                    summary: resume.summary ?? '',
+                    onAiImprove: (text) => ref
+                        .read(resumeEditorProvider(widget.resumeId).notifier)
+                        .aiImproveText(text),
+                    onChanged: (text) => ref
+                        .read(resumeEditorProvider(widget.resumeId).notifier)
+                        .updateResumeLocally(_current(resume).copyWith(summary: text)),
+                  ),
 
                   const SizedBox(height: 16),
 
@@ -547,229 +576,100 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
     );
   }
 
-  void _showEducationForm(
+  /// The latest resume in the editor, falling back to [resume].
+  Resume _current(Resume resume) =>
+      ref.read(resumeEditorProvider(widget.resumeId)).value ?? resume;
+
+  Future<void> _showEducationForm(
     BuildContext context,
     WidgetRef ref,
-    resume, {
+    Resume resume, {
     Education? initialData,
-  }) {
-    final degreeController = TextEditingController(text: initialData?.degree ?? '');
-    final institutionController = TextEditingController(text: initialData?.institution ?? '');
-    final fieldController = TextEditingController(text: initialData?.field ?? '');
-    final gpaController = TextEditingController(text: initialData?.gpa?.toString() ?? '');
-
-    showDialog(
+  }) async {
+    final updatedEdu = await showDialog<Education>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(initialData == null ? 'Add Education' : 'Edit Education'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: degreeController,
-                decoration: const InputDecoration(labelText: 'Degree'),
-              ),
-              TextField(
-                controller: institutionController,
-                decoration: const InputDecoration(labelText: 'Institution'),
-              ),
-              TextField(
-                controller: fieldController,
-                decoration: const InputDecoration(labelText: 'Field of Study'),
-              ),
-              TextField(
-                controller: gpaController,
-                decoration: const InputDecoration(labelText: 'GPA (optional)'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final updatedEdu = Education(
-                id: initialData?.id ?? const Uuid().v4(),
-                resumeId: resume.id,
-                degree: degreeController.text,
-                institution: institutionController.text,
-                field: fieldController.text,
-                startDate: initialData?.startDate ?? DateTime.now(),
-                endDate: initialData?.endDate,
-                gpa: double.tryParse(gpaController.text),
-                orderIndex: initialData?.orderIndex ?? resume.educations.length,
-              );
-              final updatedList = List<Education>.from(resume.educations);
-              final index = updatedList.indexWhere((e) => e.id == updatedEdu.id);
-              if (index >= 0) {
-                updatedList[index] = updatedEdu;
-              } else {
-                updatedList.add(updatedEdu);
-              }
-              ref
-                  .read(resumeEditorProvider(widget.resumeId).notifier)
-                  .updateResumeLocally(resume.copyWith(educations: updatedList));
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
+      builder: (context) => EducationFormDialog(
+        resumeId: resume.id,
+        initialData: initialData,
+        newOrderIndex: resume.educations.length,
       ),
     );
+    if (updatedEdu == null || !mounted) return;
+    final current = _current(resume);
+    final updatedList = List<Education>.from(current.educations);
+    final index = updatedList.indexWhere((e) => e.id == updatedEdu.id);
+    if (index >= 0) {
+      updatedList[index] = updatedEdu;
+    } else {
+      updatedList.add(updatedEdu);
+    }
+    ref
+        .read(resumeEditorProvider(widget.resumeId).notifier)
+        .updateResumeLocally(current.copyWith(educations: updatedList));
   }
 
-  void _showSkillForm(
+  Future<void> _showSkillForm(
     BuildContext context,
     WidgetRef ref,
-    resume, {
+    Resume resume, {
     Skill? initialData,
-  }) {
-    final nameController = TextEditingController(text: initialData?.name ?? '');
-    final levelController = TextEditingController(text: initialData?.level ?? 'intermediate');
-
-    showDialog(
+  }) async {
+    final updatedSkill = await showDialog<Skill>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(initialData == null ? 'Add Skill' : 'Edit Skill'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Skill Name'),
-            ),
-            TextField(
-              controller: levelController,
-              decoration: const InputDecoration(labelText: 'Level (beginner/intermediate/expert)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final updatedSkill = Skill(
-                id: initialData?.id ?? const Uuid().v4(),
-                resumeId: resume.id,
-                name: nameController.text,
-                level: levelController.text,
-                orderIndex: initialData?.orderIndex ?? resume.skills.length,
-              );
-              final updatedList = List<Skill>.from(resume.skills);
-              final index = updatedList.indexWhere((s) => s.id == updatedSkill.id);
-              if (index >= 0) {
-                updatedList[index] = updatedSkill;
-              } else {
-                updatedList.add(updatedSkill);
-              }
-              ref
-                  .read(resumeEditorProvider(widget.resumeId).notifier)
-                  .updateResumeLocally(resume.copyWith(skills: updatedList));
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
+      builder: (context) => SkillFormDialog(
+        resumeId: resume.id,
+        initialData: initialData,
+        newOrderIndex: resume.skills.length,
       ),
     );
+    if (updatedSkill == null || !mounted) return;
+    final current = _current(resume);
+    final updatedList = List<Skill>.from(current.skills);
+    final index = updatedList.indexWhere((s) => s.id == updatedSkill.id);
+    if (index >= 0) {
+      updatedList[index] = updatedSkill;
+    } else {
+      updatedList.add(updatedSkill);
+    }
+    ref
+        .read(resumeEditorProvider(widget.resumeId).notifier)
+        .updateResumeLocally(current.copyWith(skills: updatedList));
   }
 
-  void _showProjectForm(
+  Future<void> _showProjectForm(
     BuildContext context,
     WidgetRef ref,
-    resume, {
+    Resume resume, {
     Project? initialData,
-  }) {
-    final nameController = TextEditingController(text: initialData?.name ?? '');
-    final descriptionController = TextEditingController(text: initialData?.description ?? '');
-    final urlController = TextEditingController(text: initialData?.url ?? '');
-    final techStackController = TextEditingController(
-      text: initialData?.techStack.join(', ') ?? '',
-    );
-
-    showDialog(
+  }) async {
+    final updatedProject = await showDialog<Project>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(initialData == null ? 'Add Project' : 'Edit Project'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Project Name'),
-              ),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 3,
-              ),
-              TextField(
-                controller: techStackController,
-                decoration: const InputDecoration(labelText: 'Tech Stack (comma-separated)'),
-              ),
-              TextField(
-                controller: urlController,
-                decoration: const InputDecoration(labelText: 'URL (optional)'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final updatedProject = Project(
-                id: initialData?.id ?? const Uuid().v4(),
-                resumeId: resume.id,
-                name: nameController.text,
-                description: descriptionController.text,
-                techStack: techStackController.text
-                    .split(',')
-                    .map((s) => s.trim())
-                    .where((s) => s.isNotEmpty)
-                    .toList(),
-                url: urlController.text.isEmpty ? null : urlController.text,
-                orderIndex: initialData?.orderIndex ?? resume.projects.length,
-              );
-              final updatedList = List<Project>.from(resume.projects);
-              final index = updatedList.indexWhere((p) => p.id == updatedProject.id);
-              if (index >= 0) {
-                updatedList[index] = updatedProject;
-              } else {
-                updatedList.add(updatedProject);
-              }
-              ref
-                  .read(resumeEditorProvider(widget.resumeId).notifier)
-                  .updateResumeLocally(resume.copyWith(projects: updatedList));
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
+      builder: (context) => ProjectFormDialog(
+        resumeId: resume.id,
+        initialData: initialData,
+        newOrderIndex: resume.projects.length,
       ),
     );
+    if (updatedProject == null || !mounted) return;
+    final current = _current(resume);
+    final updatedList = List<Project>.from(current.projects);
+    final index = updatedList.indexWhere((p) => p.id == updatedProject.id);
+    if (index >= 0) {
+      updatedList[index] = updatedProject;
+    } else {
+      updatedList.add(updatedProject);
+    }
+    ref
+        .read(resumeEditorProvider(widget.resumeId).notifier)
+        .updateResumeLocally(current.copyWith(projects: updatedList));
   }
 
-  Widget _buildSummarySection(
+  Widget _buildTitleSection(
     BuildContext context,
     WidgetRef ref,
     Resume resume,
     ThemeData theme,
   ) {
-    final summaryController = TextEditingController(text: resume.title);
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -791,32 +691,16 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.edit_rounded, size: 20),
-                onPressed: () {
-                  showDialog(
+                onPressed: () async {
+                  final title = await showDialog<String>(
                     context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Edit Resume Title'),
-                      content: TextField(
-                        controller: summaryController,
-                        decoration: const InputDecoration(labelText: 'Title'),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            ref
-                                .read(resumeEditorProvider(widget.resumeId).notifier)
-                                .updateResumeLocally(resume.copyWith(title: summaryController.text));
-                            Navigator.pop(context);
-                          },
-                          child: const Text('Save'),
-                        ),
-                      ],
-                    ),
+                    builder: (context) =>
+                        ResumeTitleDialog(initialTitle: resume.title),
                   );
+                  if (title == null || !mounted) return;
+                  ref
+                      .read(resumeEditorProvider(widget.resumeId).notifier)
+                      .updateResumeLocally(_current(resume).copyWith(title: title));
                 },
               ),
             ],

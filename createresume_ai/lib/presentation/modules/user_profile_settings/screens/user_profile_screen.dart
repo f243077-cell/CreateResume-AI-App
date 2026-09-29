@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../presentation/widgets/subscription_navigation.dart';
 import '../providers/user_profile_notifier.dart';
+import '../widgets/contact_details_dialog.dart';
 
 /// Same deep warm background used on Home Dashboard and All Resumes,
 /// for visual consistency across the main tabs.
@@ -253,6 +254,33 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // Contact details (shown on exported resumes)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceCard,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Semantics(
+                      button: true,
+                      label: 'Edit contact details',
+                      child: ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        leading: const Icon(Icons.contact_phone_rounded),
+                        title: const Text('Contact Details'),
+                        subtitle: const Text('Phone, location, job title and links'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => _showContactDetailsDialog(
+                          context,
+                          ref,
+                          displayProfile,
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 32),
 
                   // Preferences
@@ -458,6 +486,34 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showContactDetailsDialog(
+    BuildContext context,
+    WidgetRef ref,
+    profile,
+  ) async {
+    final details = await showDialog<ContactDetails>(
+      context: context,
+      builder: (context) => ContactDetailsDialog(profile: profile),
+    );
+    if (details == null || !mounted) return;
+    await ref.read(userProfileProvider.notifier).updateProfile(
+          jobTitle: details.jobTitle,
+          phone: details.phone,
+          location: details.location,
+          linkedin: details.linkedin,
+          github: details.github,
+          leetcode: details.leetcode,
+        );
+    if (!context.mounted) return;
+    final error = ref.read(userProfileProvider).error;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error == null ? 'Contact details saved' : 'Could not save: $error'),
+        backgroundColor: error == null ? null : AppColors.error,
       ),
     );
   }

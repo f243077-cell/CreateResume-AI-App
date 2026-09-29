@@ -62,6 +62,30 @@ abstract final class Validators {
     return null;
   }
 
+  /// Optional phone number: empty is fine, otherwise 7-20 characters of
+  /// digits, spaces and + - ( ) . with at least 7 digits.
+  static String? optionalPhone(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final digits = text.replaceAll(RegExp(r'\D'), '').length;
+    if (!RegExp(r'^\+?[\d\s\-().]{7,20}$').hasMatch(text) || digits < 7) {
+      return 'Enter a valid phone number';
+    }
+    return null;
+  }
+
+  /// Optional web address: empty is fine; the scheme may be omitted
+  /// (e.g. "linkedin.com/in/name").
+  static String? optionalUrl(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final regex = RegExp(r'^(https?://)?[\w-]+(\.[\w-]+)+(/\S*)?$', caseSensitive: false);
+    if (!regex.hasMatch(text)) {
+      return 'Enter a valid link, e.g. linkedin.com/in/your-name';
+    }
+    return null;
+  }
+
   /// Ensures [end] is after [start].
   static String? dateRange(DateTime? start, DateTime? end) {
     if (start == null || end == null) return null;

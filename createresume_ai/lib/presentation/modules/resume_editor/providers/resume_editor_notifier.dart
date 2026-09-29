@@ -1,11 +1,10 @@
 // File: lib/presentation/modules/resume_editor/providers/resume_editor_notifier.dart
 
 import 'dart:async';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+import 'package:printing/printing.dart';
 import '../../../../application/providers/auth_state_provider.dart';
 import '../../../../core/constants/template_ids.dart';
 import '../../../../core/di/service_locator.dart';
@@ -45,14 +44,16 @@ class ResumeEditorNotifier extends StateNotifier<AsyncValue<Resume>> {
     );
   }
 
-  Future<void> saveToCloud() async {
+  /// Saves the current resume. Returns false when the save failed.
+  Future<bool> saveToCloud() async {
     final currentResume = state.value;
-    if (currentResume == null) return;
+    if (currentResume == null) return false;
     try {
       final updateResume = _ref.read(updateResumeUseCaseProvider);
-      await updateResume(resume: currentResume);
+      final result = await updateResume(resume: currentResume);
+      return result.isRight();
     } catch (e) {
-      // silent fail — data already saved locally
+      return false;
     }
   }
 
@@ -66,25 +67,47 @@ class ResumeEditorNotifier extends StateNotifier<AsyncValue<Resume>> {
     }
   }
 
-  Future<void> exportPdf() async {
+  /// Builds the PDF and opens the platform share sheet.
+  /// Returns an error message to show, or null on success.
+  Future<String?> exportPdf() async {
     final currentResume = state.value;
-    if (currentResume == null) return;
-    final user = _ref.read(authStateProvider).value;
-    if (user == null) return;
+    if (currentResume == null) return 'The resume has not loaded yet.';
+    final authUser = _ref.read(authStateProvider).value;
+    if (authUser == null) return 'Please sign in again to export.';
     try {
+      // The auth snapshot has no contact fields; use the full profile so
+      // phone, location and links reach the PDF.
+      final getProfile = _ref.read(getUserProfileUseCaseProvider);
+      final profileResult = await getProfile(userId: authUser.id);
+      final user = profileResult.fold((_) => authUser, (profile) => profile);
+
       final pdfService = LocalPdfGeneratorService();
       final pdfBytes = await pdfService.generatePdf(
         resume: currentResume,
         user: user,
         templateId: TemplateIds.normalize(currentResume.templateId),
       );
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/${currentResume.title}.pdf');
-      await file.writeAsBytes(pdfBytes);
-      await OpenFile.open(file.path);
+      await Printing.sharePdf(
+        bytes: Uint8List.fromList(pdfBytes),
+        filename: pdfFileName(currentResume.title),
+      );
+      return null;
     } catch (e) {
-      // handle export error
+      return 'Could not export the PDF. Please try again.';
     }
+  }
+
+  /// A file-system-safe PDF file name derived from the resume [title].
+  static String pdfFileName(String title) {
+    var name = title
+        .replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '_')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    // Drop leading/trailing dots and underscores left by replacements.
+    name = name.replaceAll(RegExp(r'^[._ ]+|[._ ]+$'), '');
+    if (name.isEmpty) name = 'resume';
+    if (name.length > 80) name = name.substring(0, 80).trim();
+    return '$name.pdf';
   }
 
   void changeTemplate(String templateId) {
