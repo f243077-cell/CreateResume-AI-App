@@ -15,13 +15,12 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final analyzerState = ref.watch(resumeAnalyzerProvider);
+    final analyzerProvider = resumeAnalyzerProvider(resumeId);
+    final analyzerState = ref.watch(analyzerProvider);
+    final hasJobDescription =
+        ref.watch(atsJobDescriptionProvider).trim().isNotEmpty;
 
-    return ProviderScope(
-      overrides: [
-        resumeIdProvider.overrideWithValue(resumeId),
-      ],
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         leading: Semantics(
@@ -37,7 +36,7 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async =>
-            ref.read(resumeAnalyzerProvider.notifier).reAnalyze(),
+            ref.read(analyzerProvider.notifier).reAnalyze(),
         child: analyzerState.when(
           data: (result) {
             final score = result.score.value;
@@ -102,7 +101,7 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          'Great Match!',
+                          _headline(rating),
                           style: theme.textTheme.titleLarge?.copyWith(
                             color: AppColors.white,
                             fontWeight: FontWeight.bold,
@@ -110,7 +109,9 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Your resume is highly compatible with your target role.',
+                          hasJobDescription
+                              ? '${result.keywordMatch.matchPercentage.round()}% of the job description keywords appear in your resume.'
+                              : 'Scored on completeness, bullet quality, length and consistency. Add a job description to check keywords.',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: AppColors.white70,
@@ -221,13 +222,16 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
                     theme,
                     title: 'Quantify Achievements',
                     content:
-                        'Your experience section lacks numbers. Try adding metrics like "Increased revenue by 15%".',
+                        'Where you truthfully can, add numbers to your bullets, like "Cut load time by 30%" or "Served 5k users".',
                   ),
                   _buildSuggestionCard(
                     theme,
                     title: 'Add Missing Keywords',
-                    content:
-                        'We noticed you are missing core skills like ${result.keywordMatch.missingKeywords.take(2).join(", ")}. Consider adding them.',
+                    content: !hasJobDescription
+                        ? 'Paste a job description on the previous screen to see which of its keywords your resume is missing.'
+                        : result.keywordMatch.missingKeywords.isEmpty
+                            ? 'Your resume already covers the top keywords from this job description.'
+                            : 'The job description mentions ${result.keywordMatch.missingKeywords.take(3).join(", ")}. Add them only if they reflect your real experience.',
                   ),
                   const SizedBox(height: 24),
                   Semantics(
@@ -236,7 +240,7 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         ref
-                            .read(resumeAnalyzerProvider.notifier)
+                            .read(analyzerProvider.notifier)
                             .reAnalyze();
                       },
                       icon: const Icon(Icons.refresh_rounded),
@@ -269,7 +273,7 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
                   child: ElevatedButton(
                     onPressed: () {
                       ref
-                          .read(resumeAnalyzerProvider.notifier)
+                          .read(analyzerProvider.notifier)
                           .reAnalyze();
                     },
                     child: const Text('Retry'),
@@ -280,9 +284,15 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
           ),
         ),
       ),
-      ),
     );
   }
+
+  String _headline(String rating) => switch (rating) {
+        'excellent' => 'Great Match!',
+        'good' => 'Good Match',
+        'fair' => 'Fair Match',
+        _ => 'Needs Work',
+      };
 
   Widget _buildLoadingSkeleton(ThemeData theme) {
     return Center(

@@ -10,7 +10,6 @@ import '../../application/use_cases/auth/sign_up_use_case.dart';
 import '../../application/use_cases/resume/analyze_ats_compatibility_use_case.dart';
 import '../../application/use_cases/resume/create_resume_use_case.dart';
 import '../../application/use_cases/resume/delete_resume_use_case.dart';
-import '../../application/use_cases/resume/export_resume_as_pdf_use_case.dart';
 import '../../application/use_cases/resume/generate_resume_with_ai_use_case.dart';
 import '../../application/use_cases/resume/get_resume_by_id_use_case.dart';
 import '../../application/use_cases/resume/get_resumes_use_case.dart';
@@ -26,15 +25,13 @@ import '../../domain/repositories/i_resume_repository.dart';
 import '../../domain/repositories/i_user_profile_repository.dart';
 import '../../domain/services/i_ai_content_generator.dart';
 import '../../domain/services/i_ats_scoring_service.dart';
-import '../../domain/services/i_pdf_generator_service.dart';
 import '../../infrastructure/repositories/supabase_application_repository.dart';
 import '../../infrastructure/repositories/supabase_auth_repository.dart';
 import '../../infrastructure/repositories/supabase_resume_repository.dart';
 import '../../infrastructure/repositories/supabase_user_profile_repository.dart';
 import '../../infrastructure/services/ai_service.dart';
-import '../../infrastructure/services/ats_scoring_service.dart';
+import '../../infrastructure/services/local_ats_scoring_service.dart';
 import '../../infrastructure/services/local_storage_service.dart';
-import '../../infrastructure/services/pdf_generator_service.dart';
 import '../../infrastructure/services/supabase_database_service.dart';
 import '../../infrastructure/services/supabase_storage_service.dart';
 
@@ -94,14 +91,9 @@ final aiContentGeneratorProvider = Provider<IAIContentGenerator>(
   (ref) => AiService(ref.watch(supabaseDatabaseServiceProvider)),
 );
 
-/// ATS scoring service binding.
+/// ATS scoring service binding: local and deterministic, no AI credits.
 final atsScoringServiceProvider = Provider<IATSScoringService>(
-  (ref) => AtsScoringService(ref.watch(supabaseDatabaseServiceProvider)),
-);
-
-/// PDF generator service binding.
-final pdfGeneratorServiceProvider = Provider<IPDFGeneratorService>(
-  (ref) => PdfGeneratorService(ref.watch(supabaseDatabaseServiceProvider)),
+  (ref) => const LocalAtsScoringService(),
 );
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -189,10 +181,6 @@ final analyzeAtsCompatibilityUseCaseProvider =
     Provider<AnalyzeAtsCompatibilityUseCase>(
   (ref) => AnalyzeAtsCompatibilityUseCase(
       ref.watch(atsScoringServiceProvider)),
-);
-
-final exportResumeAsPdfUseCaseProvider = Provider<ExportResumeAsPdfUseCase>(
-  (ref) => ExportResumeAsPdfUseCase(ref.watch(pdfGeneratorServiceProvider)),
 );
 
 final trackApplicationStatusUseCaseProvider =

@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 
 import '../../../core/errors/failures.dart';
 import '../../../domain/entities/resume.dart';
+import '../../../domain/entities/user.dart';
 import '../../../domain/services/i_ats_scoring_service.dart';
 import '../../../domain/value_objects/ats_score.dart';
 import '../../../domain/value_objects/keyword_match.dart';
@@ -32,9 +33,14 @@ class AnalyzeAtsCompatibilityUseCase {
     required Resume resume,
     required String resumeText,
     required String jobDescription,
+    User? profile,
   }) async {
     // Score the resume
-    final scoreResult = await _atsScoringService.scoreResume(resume);
+    final scoreResult = await _atsScoringService.scoreResume(
+      resume,
+      jobDescription: jobDescription,
+      profile: profile,
+    );
 
     return scoreResult.fold(
       (failure) => Left(failure),

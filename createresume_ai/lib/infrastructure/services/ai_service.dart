@@ -5,7 +5,6 @@ import 'package:dartz/dartz.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/errors/failures.dart';
 import '../../domain/services/i_ai_content_generator.dart';
-import '../../domain/value_objects/career_stage.dart';
 import 'supabase_database_service.dart';
 
 /// Calls Supabase Edge Functions for AI content generation.
@@ -18,30 +17,6 @@ class AiService implements IAIContentGenerator {
   const AiService(this._db);
 
   // ── IAIContentGenerator ───────────────────────────────────────────
-
-  @override
-  Future<Either<Failure, Map<String, String>>> generateResumeContent({
-    required String jobDescription,
-    required CareerStage careerStage,
-  }) async {
-    try {
-      final response = await _invokeWithRetry(
-        functionName: 'generate-resume',
-        body: {
-          'job_description': jobDescription,
-          'career_stage': careerStage.name,
-        },
-      );
-
-      final data = _asMap(response);
-      final content = data.map((k, v) => MapEntry(k, v.toString()));
-      return Right(content);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure('Failed to generate resume content: $e'));
-    }
-  }
 
   @override
   Future<Either<Failure, String>> improveSection(String text) =>

@@ -76,6 +76,21 @@ class Resume extends Equatable {
     );
   }
 
+  /// All resume content as plain text, one item per line, for keyword
+  /// matching and ATS scoring.
+  String toPlainText() {
+    final lines = <String>[
+      title,
+      if (summary != null && summary!.trim().isNotEmpty) summary!,
+      for (final e in workExperiences) ...[e.role, e.company, e.description],
+      for (final e in educations) ...[e.degree, e.field, e.institution],
+      for (final s in skills) ...[s.name, if (s.category != null) s.category!],
+      for (final p in projects) ...[p.name, p.description, p.techStack.join(', ')],
+      for (final h in honors) ...[h.title, if (h.description != null) h.description!],
+    ];
+    return lines.where((l) => l.trim().isNotEmpty).join('\n');
+  }
+
   @override
   List<Object?> get props => [
     id,
