@@ -4,6 +4,8 @@ interface ReqPayload {
   careerStage: string;
   jobTitle: string;
   userId: string;
+  jobDescription?: string;
+  industry?: string;
 }
 
 const corsHeaders = {
@@ -27,7 +29,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { description, careerStage, jobTitle, userId }: ReqPayload = await req.json()
+    const { description, careerStage, jobTitle, userId, jobDescription, industry }: ReqPayload = await req.json()
 
     if (!description || !careerStage || !jobTitle || !userId) {
       return new Response(
@@ -84,7 +86,11 @@ The JSON must have exactly this structure:
   honors: [{ title: string, description: string, certificateUrl: string }] (0-4 honors/awards/certifications if the description mentions any achievements, competitions, hackathons, or recognitions — otherwise return an empty array)
 }`
 
-    const userPrompt = `Career Stage: ${careerStage}\nTarget Job Title: ${jobTitle}\n\nUser Description:\n${description}\n\nGenerate a complete resume based on this information.`
+    const industryLine = industry?.trim() ? `\nIndustry: ${industry.trim()}` : ''
+    const jobPostingBlock = jobDescription?.trim()
+      ? `\n\nTarget job posting (use its keywords where truthful; never invent experience the user did not describe):\n<<<JOB_POSTING\n${jobDescription.trim()}\nJOB_POSTING>>>`
+      : ''
+    const userPrompt = `Career Stage: ${careerStage}\nTarget Job Title: ${jobTitle}${industryLine}\n\nUser Description:\n${description}${jobPostingBlock}\n\nGenerate a complete resume based on this information.`
 
     // Try multiple free models in sequence — free-tier providers can be
     // intermittently rate-limited or unavailable, so we fall back rather

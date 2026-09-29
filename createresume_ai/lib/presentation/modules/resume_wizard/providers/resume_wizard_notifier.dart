@@ -1,10 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../application/providers/auth_state_provider.dart';
-import '../../../../core/constants/template_ids.dart';
-import '../../../../core/di/service_locator.dart';
-import '../../../../core/errors/failures.dart';
-import '../../../../domain/entities/resume.dart';
 import '../../../../domain/value_objects/career_stage.dart';
 
 class ResumeWizardState {
@@ -14,9 +9,6 @@ class ResumeWizardState {
   final String? templateId;
   final String? templateCategory;
   final String jobDescription;
-  final bool isLoading;
-  final String? error;
-  final bool requiresUpgrade;
   final int currentPageIndex;
 
   const ResumeWizardState({
@@ -26,9 +18,6 @@ class ResumeWizardState {
     this.templateId,
     this.templateCategory,
     this.jobDescription = '',
-    this.isLoading = false,
-    this.error,
-    this.requiresUpgrade = false,
     this.currentPageIndex = 0,
   });
 
@@ -39,9 +28,6 @@ class ResumeWizardState {
     String? templateId,
     String? templateCategory,
     String? jobDescription,
-    bool? isLoading,
-    String? error,
-    bool? requiresUpgrade,
     int? currentPageIndex,
   }) {
     return ResumeWizardState(
@@ -51,9 +37,6 @@ class ResumeWizardState {
       templateId: templateId ?? this.templateId,
       templateCategory: templateCategory ?? this.templateCategory,
       jobDescription: jobDescription ?? this.jobDescription,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-      requiresUpgrade: requiresUpgrade ?? this.requiresUpgrade,
       currentPageIndex: currentPageIndex ?? this.currentPageIndex,
     );
   }
@@ -86,80 +69,6 @@ class ResumeWizardNotifier extends Notifier<ResumeWizardState> {
 
   void setPageIndex(int index) =>
       state = state.copyWith(currentPageIndex: index);
-
-  Future<String?> generateResume() async {
-    if (state.careerStage == null) {
-      state = state.copyWith(error: 'Please select a career stage.');
-      return null;
-    }
-    if (state.targetJobTitle.isEmpty) {
-      state = state.copyWith(error: 'Please enter a target job title.');
-      return null;
-    }
-
-    state = state.copyWith(isLoading: true, error: null);
-
-    final user = ref.read(authStateProvider).value;
-    if (user == null) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'User not authenticated.',
-      );
-      return null;
-    }
-
-    final getProfile = ref.read(getUserProfileUseCaseProvider);
-    final profileResult = await getProfile(userId: user.id);
-    final credits = profileResult.fold((l) => -1, (u) => u.creditBalance);
-    if (credits == 0) {
-      state = state.copyWith(isLoading: false, requiresUpgrade: true);
-      return null;
-    }
-
-    final generateUseCase = ref.read(generateResumeWithAIUseCaseProvider);
-    final contentResult = await generateUseCase.call(
-      userId: user.id,
-      description: state.jobDescription,
-      careerStage: state.careerStage!.name,
-      jobTitle: state.targetJobTitle,
-      templateId: state.templateId ?? TemplateIds.classic,
-    );
-
-    return await contentResult.fold(
-      (failure) async {
-        if (failure is InsufficientCreditsFailure) {
-          state = state.copyWith(isLoading: false, requiresUpgrade: true);
-        } else {
-          state = state.copyWith(isLoading: false, error: failure.message);
-        }
-        return null;
-      },
-      (contentMap) async {
-        final createResume = ref.read(createResumeUseCaseProvider);
-        final newResume = Resume(
-          id: '',
-          userId: user.id,
-          title: state.targetJobTitle,
-          templateId: state.templateId,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-
-        final createResult = await createResume(resume: newResume);
-
-        return createResult.fold(
-          (f) {
-            state = state.copyWith(isLoading: false, error: f.message);
-            return null;
-          },
-          (createdResume) {
-            state = state.copyWith(isLoading: false);
-            return createdResume.id;
-          },
-        );
-      },
-    );
-  }
 }
 
 final resumeWizardProvider =

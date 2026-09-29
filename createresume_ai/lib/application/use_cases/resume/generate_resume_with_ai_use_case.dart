@@ -2,7 +2,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/errors/exceptions.dart';
 import '../../../core/errors/failures.dart';
 import '../../../core/utils/resume_date_parser.dart';
 import '../../../domain/entities/education.dart';
@@ -15,17 +14,37 @@ import '../../../domain/repositories/i_resume_repository.dart';
 import '../../../domain/repositories/i_user_profile_repository.dart';
 import '../../../infrastructure/services/ai_service.dart';
 
+/// Returned when the AI produced a resume but saving it failed.
+///
+/// Carries the unsaved [resume] so the caller can retry the save with
+/// [GenerateResumeWithAIUseCase.saveGenerated] instead of paying for a
+/// second AI call.
+class GeneratedResumeNotSavedFailure extends Failure {
+  final Resume resume;
+
+  const GeneratedResumeNotSavedFailure(this.resume, String message)
+      : super(message);
+
+  @override
+  List<Object?> get props => [message, resume];
+}
+
 /// Generates a complete resume entity from a user description using AI.
 ///
 /// Business rules:
 /// 1. Fetch the user's profile to check credit balance.
-/// 2. If credits are less than 2, throw [InsufficientCreditsException].
+/// 2. If credits are less than [creditCost], return
+///    [InsufficientCreditsFailure] without calling the AI.
 /// 3. Call AiService.generateResumeFromDescription() to get AI-generated resume data.
 /// 4. Map the JSON response to Resume domain entity with sub-entities.
-/// 5. Save the Resume to Supabase via IResumeRepository.createResume().
-/// 6. Deduct 2 credits from user profile on success.
+/// 5. Save the Resume via [saveGenerated]; a failed save returns
+///    [GeneratedResumeNotSavedFailure] with the unsaved resume.
+/// 6. Deduct [creditCost] credits. If the deduction fails, the saved resume
+///    is removed and the failure is returned, so no resume is free.
 /// 7. Returns Either.Failure, Resume.
 class GenerateResumeWithAIUseCase {
+  static const creditCost = 2;
+
   final AiService _aiService;
   final IResumeRepository _resumeRepository;
   final IUserProfileRepository _userProfileRepository;
@@ -44,14 +63,18 @@ class GenerateResumeWithAIUseCase {
     required String jobTitle,
     required String templateId,
     required String userId,
+    String? jobDescription,
+    String? industry,
   }) async {
     final profileResult = await _userProfileRepository.getProfile(userId);
 
     return profileResult.fold((failure) => Left(failure), (user) async {
-      if (user.creditBalance < 2) {
-        throw InsufficientCreditsException(
-          requested: 2,
-          available: user.creditBalance,
+      if (user.creditBalance < creditCost) {
+        return Left(
+          InsufficientCreditsFailure(
+            requested: creditCost,
+            available: user.creditBalance,
+          ),
         );
       }
 
@@ -60,6 +83,8 @@ class GenerateResumeWithAIUseCase {
         careerStage: careerStage,
         jobTitle: jobTitle,
         userId: userId,
+        jobDescription: jobDescription,
+        industry: industry,
       );
 
       return aiResult.fold((failure) => Left(failure), (aiData) async {
@@ -68,15 +93,35 @@ class GenerateResumeWithAIUseCase {
           userId: userId,
           templateId: templateId,
         );
-
-        final saveResult = await _resumeRepository.createResume(resume);
-
-        return saveResult.fold((failure) => Left(failure), (savedResume) async {
-          await _userProfileRepository.deductCredits(userId: userId, amount: 2);
-          return Right(savedResume);
-        });
+        return saveGenerated(resume: resume, userId: userId);
       });
     });
+  }
+
+  /// Saves an AI-generated [resume] and charges for it.
+  ///
+  /// Used by [call], and directly to retry after a
+  /// [GeneratedResumeNotSavedFailure] without another AI call.
+  Future<Either<Failure, Resume>> saveGenerated({
+    required Resume resume,
+    required String userId,
+  }) async {
+    final saveResult = await _resumeRepository.createResume(resume);
+
+    return saveResult.fold(
+      (failure) => Left(GeneratedResumeNotSavedFailure(resume, failure.message)),
+      (savedResume) async {
+        final deductResult = await _userProfileRepository.deductCredits(
+          userId: userId,
+          amount: creditCost,
+        );
+        return deductResult.fold((failure) async {
+          // Charging failed: remove the resume rather than give it away.
+          await _resumeRepository.deleteResume(savedResume.id);
+          return Left(failure);
+        }, (_) => Right(savedResume));
+      },
+    );
   }
 
   /// Maps AI-generated JSON data to Resume domain entity with sub-entities.

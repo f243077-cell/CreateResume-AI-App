@@ -1,5 +1,4 @@
 import 'package:createresume_app/application/use_cases/resume/generate_resume_with_ai_use_case.dart';
-import 'package:createresume_app/core/errors/exceptions.dart';
 import 'package:createresume_app/core/errors/failures.dart';
 import 'package:createresume_app/domain/entities/resume.dart';
 import 'package:createresume_app/domain/entities/user.dart';
@@ -75,25 +74,154 @@ void main() {
 
   group('GenerateResumeWithAIUseCase', () {
     test(
-      'throws InsufficientCreditsException when credit balance is less than 2',
+      'returns InsufficientCreditsFailure without calling the AI when credits < 2',
       () async {
         // Arrange — user has 1 credit (needs 2)
         when(() => mockUserProfileRepository.getProfile(testUserId))
             .thenAnswer((_) async => Right(makeUser(creditBalance: 1)));
 
-        // Act & Assert
+        // Act — must return, not throw
+        final result = await useCase.call(
+          userId: testUserId,
+          description: testDescription,
+          careerStage: testCareerStage,
+          jobTitle: testJobTitle,
+          templateId: testTemplateId,
+        );
+
+        // Assert
         expect(
-          () => useCase.call(
+          result,
+          const Left<Failure, Resume>(
+            InsufficientCreditsFailure(requested: 2, available: 1),
+          ),
+        );
+        verifyNever(() => mockAIService.generateResumeFromDescription(
+              description: any(named: 'description'),
+              careerStage: any(named: 'careerStage'),
+              jobTitle: any(named: 'jobTitle'),
+              userId: any(named: 'userId'),
+              jobDescription: any(named: 'jobDescription'),
+              industry: any(named: 'industry'),
+            ));
+        verifyNever(() => mockResumeRepository.createResume(any()));
+      },
+    );
+
+    group('save and charge', () {
+      final user = makeUser(creditBalance: 5);
+      final aiData = <String, dynamic>{'jobTitle': testJobTitle};
+
+      setUp(() {
+        when(() => mockUserProfileRepository.getProfile(testUserId))
+            .thenAnswer((_) async => Right(user));
+        when(() => mockAIService.generateResumeFromDescription(
+              description: any(named: 'description'),
+              careerStage: any(named: 'careerStage'),
+              jobTitle: any(named: 'jobTitle'),
+              userId: any(named: 'userId'),
+              jobDescription: any(named: 'jobDescription'),
+              industry: any(named: 'industry'),
+            )).thenAnswer((_) async => Right(aiData));
+      });
+
+      Future<Either<Failure, Resume>> run() => useCase.call(
             userId: testUserId,
             description: testDescription,
             careerStage: testCareerStage,
             jobTitle: testJobTitle,
             templateId: testTemplateId,
-          ),
-          throwsA(isA<InsufficientCreditsException>()),
+          );
+
+      test('failed save keeps the generated resume and does not charge',
+          () async {
+        when(() => mockResumeRepository.createResume(any()))
+            .thenAnswer((_) async => const Left(ServerFailure('db down')));
+
+        final result = await run();
+
+        final failure = result.swap().getOrElse(() => throw StateError('Right'));
+        expect(failure, isA<GeneratedResumeNotSavedFailure>());
+        expect(
+          (failure as GeneratedResumeNotSavedFailure).resume.title,
+          testJobTitle,
         );
-      },
-    );
+        verifyNever(() => mockUserProfileRepository.deductCredits(
+              userId: any(named: 'userId'),
+              amount: any(named: 'amount'),
+            ));
+      });
+
+      test('saveGenerated retries the save without calling the AI again',
+          () async {
+        final saved = makeResume();
+        when(() => mockResumeRepository.createResume(any()))
+            .thenAnswer((_) async => Right(saved));
+        when(() => mockUserProfileRepository.deductCredits(
+              userId: testUserId,
+              amount: 2,
+            )).thenAnswer((_) async => Right(user));
+
+        final result =
+            await useCase.saveGenerated(resume: saved, userId: testUserId);
+
+        expect(result, Right<Failure, Resume>(saved));
+        verifyNever(() => mockAIService.generateResumeFromDescription(
+              description: any(named: 'description'),
+              careerStage: any(named: 'careerStage'),
+              jobTitle: any(named: 'jobTitle'),
+              userId: any(named: 'userId'),
+              jobDescription: any(named: 'jobDescription'),
+              industry: any(named: 'industry'),
+            ));
+      });
+
+      test('failed deduction removes the saved resume and returns the failure',
+          () async {
+        final saved = makeResume();
+        when(() => mockResumeRepository.createResume(any()))
+            .thenAnswer((_) async => Right(saved));
+        when(() => mockUserProfileRepository.deductCredits(
+              userId: testUserId,
+              amount: 2,
+            )).thenAnswer((_) async => const Left(ServerFailure('charge failed')));
+        when(() => mockResumeRepository.deleteResume(saved.id))
+            .thenAnswer((_) async => const Right(null));
+
+        final result = await run();
+
+        expect(result, const Left<Failure, Resume>(ServerFailure('charge failed')));
+        verify(() => mockResumeRepository.deleteResume(saved.id)).called(1);
+      });
+
+      test('passes the job posting and industry to the AI', () async {
+        when(() => mockResumeRepository.createResume(any()))
+            .thenAnswer((_) async => Right(makeResume()));
+        when(() => mockUserProfileRepository.deductCredits(
+              userId: testUserId,
+              amount: 2,
+            )).thenAnswer((_) async => Right(user));
+
+        await useCase.call(
+          userId: testUserId,
+          description: testDescription,
+          careerStage: testCareerStage,
+          jobTitle: testJobTitle,
+          templateId: testTemplateId,
+          jobDescription: 'We need Kotlin',
+          industry: 'Fintech',
+        );
+
+        verify(() => mockAIService.generateResumeFromDescription(
+              description: testDescription,
+              careerStage: testCareerStage,
+              jobTitle: testJobTitle,
+              userId: testUserId,
+              jobDescription: 'We need Kotlin',
+              industry: 'Fintech',
+            )).called(1);
+      });
+    });
 
     test(
       'deducts 2 credits and returns resume on success',

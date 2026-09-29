@@ -102,6 +102,8 @@ class AiService implements IAIContentGenerator {
     required String careerStage,
     required String jobTitle,
     required String userId,
+    String? jobDescription,
+    String? industry,
   }) async {
     try {
       final response = await _invokeWithRetry(
@@ -111,6 +113,10 @@ class AiService implements IAIContentGenerator {
           'careerStage': careerStage,
           'jobTitle': jobTitle,
           'userId': userId,
+          if (jobDescription != null && jobDescription.trim().isNotEmpty)
+            'jobDescription': jobDescription.trim(),
+          if (industry != null && industry.trim().isNotEmpty)
+            'industry': industry.trim(),
         },
       );
 

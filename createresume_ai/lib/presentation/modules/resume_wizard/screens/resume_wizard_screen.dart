@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../application/use_cases/resume/generate_resume_with_ai_use_case.dart';
 import '../../../../presentation/widgets/subscription_navigation.dart';
 import '../../../../presentation/widgets/shimmer_skeleton.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/routing/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../domain/value_objects/career_stage.dart';
@@ -88,6 +91,8 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
           careerStage: careerStage?.name ?? 'entry-level',
           jobTitle: _titleController.text,
           templateId: null, // Will be selected after generation
+          jobDescription: _jdController.text,
+          industry: _industryController.text,
         );
   }
 
@@ -98,39 +103,48 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
       resumeWizardProvider.select((s) => s.currentPageIndex),
     );
 
-    // Handle errors via listener
-    ref.listen<ResumeWizardState>(resumeWizardProvider, (prev, next) {
-      if (next.error != null && next.error != prev?.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error!),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-      if (next.requiresUpgrade && !(prev?.requiresUpgrade ?? false)) {
-        showUpgradeRequiredDialog(
-          context,
-          message:
-              'You have run out of AI credits. Please upgrade your plan to generate more resumes.',
-        );
-      }
-    });
-
-    // Handle AI generation state
+    // Handle AI generation state: navigate on success, explain failures.
     ref.listen(resumeGenerationProvider, (prev, next) {
+      // Loading is handled by the UI overlay.
+      if (next.isLoading) return;
       next.when(
         data: (resume) {
-          // Navigation is handled in the provider
+          if (resume != null && resume != prev?.value) {
+            context.pushNamed(
+              AppRouteNames.templateSelection,
+              pathParameters: {'resumeId': resume.id},
+            );
+          }
         },
-        loading: () {
-          // Loading is handled by the UI overlay
-        },
+        loading: () {},
         error: (error, stack) {
+          if (error is InsufficientCreditsFailure) {
+            showUpgradeRequiredDialog(
+              context,
+              message:
+                  'You have run out of AI credits. Please upgrade your plan to generate more resumes.',
+            );
+            return;
+          }
+          final message = error is Failure ? error.message : error.toString();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to generate resume: ${error.toString()}'),
+              content: Text(
+                error is GeneratedResumeNotSavedFailure
+                    ? 'Your resume was generated but could not be saved: $message'
+                    : 'Failed to generate resume: $message',
+              ),
               backgroundColor: AppColors.error,
+              // Retry only the save; the AI result is kept, no new credits.
+              action: error is GeneratedResumeNotSavedFailure
+                  ? SnackBarAction(
+                      label: 'Retry',
+                      textColor: AppColors.white,
+                      onPressed: () => ref
+                          .read(resumeGenerationProvider.notifier)
+                          .retrySave(),
+                    )
+                  : null,
             ),
           );
         },
@@ -471,9 +485,6 @@ class _WizardBottomControls extends ConsumerWidget {
     final currentIndex = ref.watch(
       resumeWizardProvider.select((s) => s.currentPageIndex),
     );
-    final isLoading = ref.watch(
-      resumeWizardProvider.select((s) => s.isLoading),
-    );
     final isGenerating = ref.watch(resumeGenerationProvider).isLoading;
 
     // Check if description has minimum 100 characters on the last step
@@ -493,7 +504,7 @@ class _WizardBottomControls extends ConsumerWidget {
           if (currentIndex > 0)
             Expanded(
               child: OutlinedButton(
-                onPressed: (isLoading || isGenerating) ? null : onPrevious,
+                onPressed: isGenerating ? null : onPrevious,
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(80, 52),
                   shape: RoundedRectangleBorder(
@@ -508,10 +519,10 @@ class _WizardBottomControls extends ConsumerWidget {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: (isLoading || isGenerating || !canProceed)
+              onPressed: (isGenerating || !canProceed)
                   ? null
                   : onNext,
-              icon: (isLoading || isGenerating)
+              icon: isGenerating
                   ? const SizedBox(
                       width: 20,
                       height: 20,
