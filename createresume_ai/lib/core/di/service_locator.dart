@@ -31,7 +31,6 @@ import '../../infrastructure/repositories/supabase_resume_repository.dart';
 import '../../infrastructure/repositories/supabase_user_profile_repository.dart';
 import '../../infrastructure/services/ai_service.dart';
 import '../../infrastructure/services/local_ats_scoring_service.dart';
-import '../../infrastructure/services/local_storage_service.dart';
 import '../../infrastructure/services/supabase_database_service.dart';
 import '../../infrastructure/services/supabase_storage_service.dart';
 
@@ -47,11 +46,6 @@ final supabaseDatabaseServiceProvider = Provider<SupabaseDatabaseService>(
 /// Supabase storage helper.
 final supabaseStorageServiceProvider = Provider<SupabaseStorageService>(
   (ref) => SupabaseStorageService(ref.watch(supabaseDatabaseServiceProvider)),
-);
-
-/// Hive local storage cache.
-final localStorageServiceProvider = Provider<LocalStorageService>(
-  (ref) => LocalStorageService(),
 );
 
 // ═══════════════════════════════════════════════════════════════════════════

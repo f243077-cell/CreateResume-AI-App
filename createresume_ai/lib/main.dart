@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_router.dart';
@@ -29,7 +28,6 @@ Future<void> main() async {
     url: _requireDefine('SUPABASE_URL', _supabaseUrl),
     publishableKey: _requireDefine('SUPABASE_ANON_KEY', _supabaseAnonKey),
   );
-  await Hive.initFlutter();
   runApp(const ProviderScope(child: CreateResumeApp()));
 }
 
