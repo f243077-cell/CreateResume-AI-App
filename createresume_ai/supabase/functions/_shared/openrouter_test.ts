@@ -24,3 +24,13 @@ Deno.test('cleanText strips fences and wrapping quotes', () => {
   assertEquals(cleanText('```\nLed X\n```'), 'Led X')
   assertEquals(cleanText('"Led X"'), 'Led X')
 })
+
+Deno.test('premium users get AI_MODELS_PREMIUM when set', () => {
+  Deno.env.delete('AI_MODELS')
+  Deno.env.delete('AI_MODELS_PREMIUM')
+  assertEquals(modelList(true), DEFAULT_MODELS, 'no premium list: same as free')
+  Deno.env.set('AI_MODELS_PREMIUM', 'paid/model')
+  assertEquals(modelList(true), ['paid/model'])
+  assertEquals(modelList(false), DEFAULT_MODELS)
+  Deno.env.delete('AI_MODELS_PREMIUM')
+})

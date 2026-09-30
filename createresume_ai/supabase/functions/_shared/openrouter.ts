@@ -8,25 +8,43 @@ export const DEFAULT_MODELS = [
   'qwen/qwen3.8-27b:free',
 ]
 
-export function modelList(): string[] {
-  const fromEnv = (Deno.env.get('AI_MODELS') ?? '')
+function envList(name: string): string[] {
+  return (Deno.env.get(name) ?? '')
     .split(',')
     .map((m) => m.trim())
     .filter(Boolean)
-  return fromEnv.length > 0 ? fromEnv : DEFAULT_MODELS
 }
 
-export type ChatMessage = { role: 'system' | 'user'; content: string }
+/**
+ * Models to try, in order. Premium users get AI_MODELS_PREMIUM (for example
+ * a stronger paid model) when that secret is set; everyone else, and premium
+ * users without it, get AI_MODELS or the free defaults.
+ */
+export function modelList(premium = false): string[] {
+  const premiumModels = premium ? envList('AI_MODELS_PREMIUM') : []
+  if (premiumModels.length > 0) return premiumModels
+  const models = envList('AI_MODELS')
+  return models.length > 0 ? models : DEFAULT_MODELS
+}
+
+export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
 
 /** Tries each model in turn; returns the first non-empty answer. */
 export async function callModels(
   apiKey: string,
   messages: ChatMessage[],
-  opts: { maxTokens: number; temperature: number; timeoutMs?: number },
+  opts: {
+    maxTokens: number
+    temperature: number
+    timeoutMs?: number
+    /** Ask for a JSON object (ignored by models that do not support it). */
+    json?: boolean
+    models?: string[]
+  },
 ): Promise<{ content: string; model: string }> {
   let lastError = ''
 
-  for (const model of modelList()) {
+  for (const model of opts.models ?? modelList()) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs ?? 20000)
     try {
@@ -43,6 +61,7 @@ export async function callModels(
           messages,
           temperature: opts.temperature,
           max_tokens: opts.maxTokens,
+          ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
         }),
         signal: controller.signal,
       })
