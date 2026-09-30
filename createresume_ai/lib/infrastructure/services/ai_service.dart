@@ -22,11 +22,12 @@ class AiService implements IAIContentGenerator {
   Future<dynamic> _invokeWithRetry({
     required String functionName,
     required Map<String, dynamic> body,
+    Duration timeout = EdgeFunctionClient.aiTimeout,
   }) =>
       _functions.invoke(
         functionName,
         body,
-        timeout: EdgeFunctionClient.aiTimeout,
+        timeout: timeout,
         maxRetries: EdgeFunctionClient.aiMaxRetries,
       );
 
@@ -53,6 +54,7 @@ class AiService implements IAIContentGenerator {
     try {
       final response = await _invokeWithRetry(
         functionName: 'dynamic-api',
+        timeout: EdgeFunctionClient.generationTimeout,
         body: {
           'description': description,
           'careerStage': careerStage,

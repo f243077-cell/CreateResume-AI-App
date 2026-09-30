@@ -20,9 +20,13 @@ class EdgeFunctionClient {
 
   const EdgeFunctionClient(this._db, {this.backoff = const Duration(seconds: 2)});
 
-  /// AI calls: generation can take a while, but at most one retry.
+  /// AI calls: at most one retry.
   static const aiTimeout = Duration(seconds: 45);
   static const aiMaxRetries = 1;
+
+  /// Full resume generation: the server tries several free models within a
+  /// ~2 minute budget (about 4000 tokens of output), so wait longer.
+  static const generationTimeout = Duration(seconds: 130);
 
   /// Returns the response body (decoded JSON or a string).
   Future<dynamic> invoke(

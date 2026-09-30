@@ -114,6 +114,10 @@ Deno.serve(async (req) => {
           .eq('id', caller.userId)
           .maybeSingle()
         const models = modelList(plan?.subscription_status === 'premium')
+        // A full resume is ~4000 tokens; free models can need most of a
+        // minute. Share one budget (including a repair call) that stays
+        // inside the Edge Function wall-clock limit.
+        const deadline = Date.now() + 125_000
 
         return generateValidResume(
           (messages) => callModels(openRouterApiKey, messages, {
@@ -121,6 +125,8 @@ Deno.serve(async (req) => {
             temperature: 0.7,
             json: true,
             models,
+            timeoutMs: 60_000,
+            deadline,
             // A resume legitimately repeats phrases across bullets; the
             // schema check (and one repair call) judges the answer instead.
             accept: () => true,

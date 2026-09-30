@@ -79,4 +79,9 @@ void main() {
     expect(EdgeFunctionClient.aiTimeout, const Duration(seconds: 45));
     expect(EdgeFunctionClient.aiMaxRetries, 1);
   });
+
+  test('resume generation waits longer than the server model budget', () {
+    // dynamic-api gives the models ~125 s in total.
+    expect(EdgeFunctionClient.generationTimeout, greaterThan(const Duration(seconds: 125)));
+  });
 }

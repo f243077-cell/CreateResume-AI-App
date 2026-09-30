@@ -64,33 +64,54 @@ export async function callModels(
     models?: string[]
     /** Rejects an answer so the next model is tried (default: not degenerate). */
     accept?: (content: string) => boolean
+    /** Stop trying models after this time (epoch ms), to stay inside the
+     * function's wall-clock limit. */
+    deadline?: number
   },
 ): Promise<{ content: string; model: string }> {
+  // One short line per model, returned when every model fails.
+  const outcomes: string[] = []
   let lastError = ''
 
   for (const model of opts.models ?? modelList()) {
+    const remaining = (opts.deadline ?? Number.POSITIVE_INFINITY) - Date.now()
+    if (remaining < 5000) {
+      outcomes.push(`${model}: skipped (out of time)`)
+      break
+    }
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs ?? 20000)
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      Math.min(opts.timeoutMs ?? 20000, remaining),
+    )
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://createresume.ai',
-          'X-Title': 'CreateResume AI',
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: opts.temperature,
-          max_tokens: opts.maxTokens,
-          ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
-        }),
-        signal: controller.signal,
-      })
+      const request = (json: boolean) =>
+        fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://createresume.ai',
+            'X-Title': 'CreateResume AI',
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: opts.temperature,
+            max_tokens: opts.maxTokens,
+            ...(json ? { response_format: { type: 'json_object' } } : {}),
+          }),
+          signal: controller.signal,
+        })
+      let response = await request(opts.json ?? false)
+      // Some providers reject JSON mode; the caller validates the JSON anyway.
+      if (opts.json && [400, 404, 422].includes(response.status)) {
+        await response.body?.cancel()
+        response = await request(false)
+      }
       if (!response.ok) {
         lastError = await response.text()
+        outcomes.push(`${model}: HTTP ${response.status}`)
         console.error(`Model "${model}" failed:`, lastError)
         continue
       }
@@ -103,18 +124,23 @@ export async function callModels(
           return { content, model }
         }
         lastError = `rejected answer from ${model}`
+        outcomes.push(`${model}: repeating answer`)
         console.warn(`Model "${model}" gave an unusable answer; trying the next one`)
         continue
       }
       lastError = 'empty response'
+      outcomes.push(`${model}: empty answer`)
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err)
+      const timedOut = err instanceof DOMException && err.name === 'AbortError'
+      outcomes.push(`${model}: ${timedOut ? 'timed out' : 'network error'}`)
       console.error(`Model "${model}" request failed/timed out:`, lastError)
     } finally {
       clearTimeout(timeoutId)
     }
   }
-  throw new Error(`All AI models are currently unavailable. Last error: ${lastError}`)
+  console.error('All models failed:', lastError)
+  throw new Error(`All AI models are currently unavailable (${outcomes.join('; ')}). Please try again in a minute.`)
 }
 
 /** Parses the JSON object in a model answer, ignoring any wrapper text. */
