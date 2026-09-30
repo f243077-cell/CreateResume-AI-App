@@ -78,4 +78,46 @@ void main() {
 
     expect(result.isLeft(), isTrue);
   });
+
+  test('a resume round-trips through the save payload and the row mappers', () {
+    // Build the rows the database would return for the saved payload: the
+    // resume row gains user_id and timestamps, children gain resume_id, and
+    // date columns come back as yyyy-mm-dd.
+    final payload = SupabaseResumeRepository.toSavePayload(resume);
+    String? day(Object? iso) => iso == null ? null : (iso as String).substring(0, 10);
+    List<Map<String, dynamic>> children(String key, {bool dates = false}) => [
+          for (final c in payload[key] as List)
+            {
+              ...c as Map<String, dynamic>,
+              'resume_id': resume.id,
+              if (dates) 'start_date': day(c['start_date']),
+              if (dates) 'end_date': day(c['end_date']),
+            },
+        ];
+    final row = <String, dynamic>{
+      ...payload,
+      'user_id': resume.userId,
+      'created_at': resume.createdAt.toIso8601String(),
+      'updated_at': resume.updatedAt.toIso8601String(),
+      'work_experiences': children('work_experiences', dates: true),
+      'educations': children('educations', dates: true),
+      'skills': children('skills'),
+      'projects': children('projects'),
+      'honors': children('honors'),
+    };
+
+    final back = SupabaseResumeRepository.fromRow(row);
+
+    // Children come back with the real resume id.
+    final expected = resume.copyWith(
+      workExperiences: [for (final w in resume.workExperiences) w.copyWith(resumeId: 'r1')],
+      skills: [for (final x in resume.skills) x.copyWith(resumeId: 'r1')],
+      projects: [for (final x in resume.projects) x.copyWith(resumeId: 'r1')],
+      honors: [for (final x in resume.honors) x.copyWith(resumeId: 'r1')],
+    );
+    expect(back, expected);
+    expect(back.skills.single.category, 'Languages');
+    expect(back.honors.single.certificateUrl, 'https://x.test');
+    expect(back.workExperiences.single.endDate, isNull);
+  });
 }

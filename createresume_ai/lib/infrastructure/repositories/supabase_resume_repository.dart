@@ -36,7 +36,7 @@ class SupabaseResumeRepository implements IResumeRepository {
       final data = limit == null ? await query : await query.limit(limit);
 
       final resumes = (data as List<dynamic>)
-          .map((e) => _assembleResume(e as Map<String, dynamic>))
+          .map((e) => fromRow(e as Map<String, dynamic>))
           .toList();
 
       return Right(resumes);
@@ -61,7 +61,7 @@ class SupabaseResumeRepository implements IResumeRepository {
           .eq('id', id)
           .single();
 
-      return Right(_assembleResume(data));
+      return Right(fromRow(data));
     } catch (e) {
       return Left(ServerFailure('Failed to fetch resume: $e'));
     }
@@ -101,7 +101,8 @@ class SupabaseResumeRepository implements IResumeRepository {
 
   // ── Assembly ──────────────────────────────────────────────────────
 
-  Resume _assembleResume(Map<String, dynamic> data) {
+  /// Builds a [Resume] from a `resumes` row with its nested child rows.
+  static Resume fromRow(Map<String, dynamic> data) {
     return Resume(
       id: data['id'] as String,
       userId: data['user_id'] as String,
@@ -120,14 +121,14 @@ class SupabaseResumeRepository implements IResumeRepository {
     );
   }
 
-  List<T> _mapList<T>(dynamic list, T Function(Map<String, dynamic>) mapper) {
+  static List<T> _mapList<T>(dynamic list, T Function(Map<String, dynamic>) mapper) {
     if (list == null) return [];
     return (list as List<dynamic>)
         .map((e) => mapper(e as Map<String, dynamic>))
         .toList();
   }
 
-  WorkExperience _mapWorkExperience(Map<String, dynamic> m) => WorkExperience(
+  static WorkExperience _mapWorkExperience(Map<String, dynamic> m) => WorkExperience(
     id: m['id'] as String,
     resumeId: m['resume_id'] as String,
     company: m['company'] as String,
@@ -141,7 +142,7 @@ class SupabaseResumeRepository implements IResumeRepository {
     orderIndex: m['order_index'] as int? ?? 0,
   );
 
-  Education _mapEducation(Map<String, dynamic> m) => Education(
+  static Education _mapEducation(Map<String, dynamic> m) => Education(
     id: m['id'] as String,
     resumeId: m['resume_id'] as String,
     institution: m['institution'] as String,
@@ -155,7 +156,7 @@ class SupabaseResumeRepository implements IResumeRepository {
     orderIndex: m['order_index'] as int? ?? 0,
   );
 
-  Skill _mapSkill(Map<String, dynamic> m) => Skill(
+  static Skill _mapSkill(Map<String, dynamic> m) => Skill(
     id: m['id'] as String,
     resumeId: m['resume_id'] as String,
     name: m['name'] as String,
@@ -164,7 +165,7 @@ class SupabaseResumeRepository implements IResumeRepository {
     orderIndex: m['order_index'] as int? ?? 0,
   );
 
-  Project _mapProject(Map<String, dynamic> m) => Project(
+  static Project _mapProject(Map<String, dynamic> m) => Project(
     id: m['id'] as String,
     resumeId: m['resume_id'] as String,
     name: m['name'] as String,
@@ -176,7 +177,7 @@ class SupabaseResumeRepository implements IResumeRepository {
     orderIndex: m['order_index'] as int? ?? 0,
   );
 
-  Honor _mapHonor(Map<String, dynamic> m) => Honor(
+  static Honor _mapHonor(Map<String, dynamic> m) => Honor(
     id: m['id'] as String,
     resumeId: m['resume_id'] as String,
     title: m['title'] as String,
