@@ -5,8 +5,9 @@ import '../entities/resume.dart';
 
 /// Resume CRUD and template repository contract.
 abstract class IResumeRepository {
-  /// Fetches all resumes belonging to [userId].
-  Future<Either<Failure, List<Resume>>> getResumes(String userId);
+  /// Resumes for [userId], newest first, without child sections (for
+  /// lists). Use [getResumeById] for the full resume.
+  Future<Either<Failure, List<Resume>>> getResumeSummaries(String userId, {int? limit});
 
   /// Fetches a single resume by its [id].
   Future<Either<Failure, Resume>> getResumeById(String id);

@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../application/providers/auth_state_provider.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../application/providers/resume_list_provider.dart';
 import '../../../../domain/entities/resume.dart';
 
 class AllResumesState {
@@ -35,29 +34,22 @@ class AllResumesNotifier extends AsyncNotifier<AllResumesState> {
   }
 
   Future<AllResumesState> _fetchData() async {
-    final user = await ref.watch(authStateProvider.future);
-
-    if (user == null) {
-      return const AllResumesState(resumes: [], isLoading: false);
-    }
-
-    final getResumes = ref.watch(getResumesUseCaseProvider);
-    final resumeResult = await getResumes(userId: user.id);
-
-    return resumeResult.fold(
-      (failure) => AllResumesState(
+    // Shared with the dashboard, which shows the first five.
+    try {
+      final resumes = await ref.watch(resumeListProvider.future);
+      return AllResumesState(resumes: resumes, isLoading: false);
+    } catch (failure) {
+      return AllResumesState(
         resumes: [],
         isLoading: false,
         error: failure.toString(),
-      ),
-      (resumes) => AllResumesState(
-        resumes: resumes,
-        isLoading: false,
-      ),
-    );
+      );
+    }
   }
 
   Future<void> refresh() async {
+    // Refetch the shared resume list too (e.g. after a delete).
+    ref.invalidate(resumeListProvider);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _fetchData());
   }

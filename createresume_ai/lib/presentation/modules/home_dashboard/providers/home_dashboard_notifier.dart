@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/providers/auth_state_provider.dart';
 import '../../../../application/providers/connectivity_provider.dart';
+import '../../../../application/providers/resume_list_provider.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../domain/entities/resume.dart';
 import '../../../../domain/entities/user.dart';
@@ -25,7 +26,8 @@ class HomeDashboardNotifier extends AsyncNotifier<HomeDashboardState> {
   }
 
   Future<HomeDashboardState> _fetchData() async {
-    final getResumes = ref.watch(getResumesUseCaseProvider);
+    // Watch everything before the first await.
+    final resumesFuture = ref.watch(resumeListProvider.future);
     final getProfile = ref.watch(getUserProfileUseCaseProvider);
     // Read, not watch: a connectivity change must not refetch the profile and
     // all resumes. The offline banner watches connectivityProvider directly.
@@ -50,13 +52,13 @@ class HomeDashboardNotifier extends AsyncNotifier<HomeDashboardState> {
       (profile) => profile,
     );
 
-    final resumeResult = await getResumes(userId: authUser.id);
-
-    final List<Resume> resumes = resumeResult.fold((failure) => [], (resumes) {
-      final sorted = List<Resume>.from(resumes)
-        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      return sorted.take(5).toList();
-    });
+    // Shared with All Resumes; already newest first.
+    List<Resume> resumes;
+    try {
+      resumes = (await resumesFuture).take(5).toList();
+    } catch (_) {
+      resumes = [];
+    }
 
     return HomeDashboardState(
       user: user,
@@ -66,6 +68,8 @@ class HomeDashboardNotifier extends AsyncNotifier<HomeDashboardState> {
   }
 
   Future<void> refresh() async {
+    // Refetch the shared resume list too (e.g. after a delete).
+    ref.invalidate(resumeListProvider);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _fetchData());
   }

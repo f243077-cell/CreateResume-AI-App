@@ -20,20 +20,20 @@ class SupabaseResumeRepository implements IResumeRepository {
   const SupabaseResumeRepository(this._db);
 
   @override
-  Future<Either<Failure, List<Resume>>> getResumes(String userId) async {
+  Future<Either<Failure, List<Resume>>> getResumeSummaries(
+    String userId, {
+    int? limit,
+  }) async {
     try {
-      final data = await _db
+      // Only what list cards show; no child tables.
+      final query = _db
           .from('resumes')
-          .select('''
-            *,
-            work_experiences(*),
-            educations(*),
-            skills(*),
-            projects(*),
-            honors(*)
-          ''')
+          .select(
+            'id, user_id, title, template_id, ats_score, is_published, created_at, updated_at',
+          )
           .eq('user_id', userId)
           .order('updated_at', ascending: false);
+      final data = limit == null ? await query : await query.limit(limit);
 
       final resumes = (data as List<dynamic>)
           .map((e) => _assembleResume(e as Map<String, dynamic>))
