@@ -58,7 +58,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           backgroundColor: AppColors.success,
         ),
       );
-      ref.read(passwordRecoveryProvider.notifier).state = false;
+      ref.read(passwordRecoveryProvider.notifier).set(false);
 
       // Sign out the temporary recovery session and send the user to
       // the login screen to sign in with their new password.

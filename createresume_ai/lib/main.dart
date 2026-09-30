@@ -6,7 +6,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_router.dart';
-import 'core/routing/app_routes.dart';
 import 'core/theme/app_theme.dart';
 
 // Supplied at build time with --dart-define-from-file=env.json, so no
@@ -48,16 +47,9 @@ class _CreateResumeAppState extends ConsumerState<CreateResumeApp> {
 
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.passwordRecovery) {
-        // Set recovery flag FIRST so the redirect guard is active
-        // before the router re-evaluates.
-        ref.read(passwordRecoveryProvider.notifier).state = true;
-
-        // Navigate after the current frame so the router and widget
-        // tree are in a consistent state — avoids the white-screen flash.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          ref.read(routerProvider).goNamed(AppRouteNames.resetPassword);
-        });
+        // The router listens to this flag and redirects to reset-password;
+        // it is no longer rebuilt, so no manual navigation is needed.
+        ref.read(passwordRecoveryProvider.notifier).set(true);
       }
     });
   }

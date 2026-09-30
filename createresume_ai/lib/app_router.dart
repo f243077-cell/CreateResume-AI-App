@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,49 +25,76 @@ final seenOnboardingProvider = FutureProvider<bool>((ref) async {
   final prefs = await SharedPreferences.getInstance();
   return prefs.getBool('seen_onboarding') ?? false;
 });
-final passwordRecoveryProvider = StateProvider<bool>((ref) => false);
+/// True while the user is completing a password reset from the email link.
+class PasswordRecoveryNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
 
+  void set(bool value) => state = value;
+}
+
+final passwordRecoveryProvider =
+    NotifierProvider<PasswordRecoveryNotifier, bool>(PasswordRecoveryNotifier.new);
+
+/// Where to redirect [location], or null to stay. Pure so it can be tested.
+String? appRedirect({
+  required String location,
+  required bool authLoading,
+  required bool isAuthenticated,
+  required bool? seenOnboarding,
+  required bool isRecovery,
+}) {
+  // Already on reset password screen — stay there.
+  if (location == AppRoutes.resetPassword) return null;
+
+  // Recovery mode active — force navigation to reset-password.
+  if (isRecovery) return AppRoutes.resetPassword;
+
+  if (authLoading || seenOnboarding == null) return null;
+
+  final isAuthRoute =
+      location == AppRoutes.login ||
+      location == AppRoutes.signup ||
+      location == AppRoutes.forgotPassword;
+  final isOnboarding = location == AppRoutes.onboarding;
+  final isRoot = location == AppRoutes.root;
+
+  if (isRoot) {
+    if (!seenOnboarding) return AppRoutes.onboarding;
+    return isAuthenticated ? AppRoutes.home : AppRoutes.login;
+  }
+
+  if (isAuthenticated && isAuthRoute) return AppRoutes.home;
+
+  if (!isAuthenticated && !isAuthRoute && !isOnboarding) {
+    return AppRoutes.login;
+  }
+
+  return null;
+}
+
+/// Built once. Auth, onboarding and password-recovery changes re-run
+/// [appRedirect] through refreshListenable instead of creating a new
+/// GoRouter, which used to reset the navigation stack on every auth event.
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final seenOnboardingAsync = ref.watch(seenOnboardingProvider);
-  final seenOnboarding = seenOnboardingAsync.value;
-  final isRecovery = ref.watch(passwordRecoveryProvider);
+  final refresh = ValueNotifier<int>(0);
+  ref.onDispose(refresh.dispose);
+  ref.listen(authStateProvider, (_, _) => refresh.value++);
+  ref.listen(seenOnboardingProvider, (_, _) => refresh.value++);
+  ref.listen(passwordRecoveryProvider, (_, _) => refresh.value++);
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: AppRoutes.root,
+    refreshListenable: refresh,
     redirect: (context, state) {
-      final location = state.uri.path;
-      final isResetPassword = location == AppRoutes.resetPassword;
-
-      // Already on reset password screen — stay there.
-      if (isResetPassword) return null;
-
-      // Recovery mode active — force navigation to reset-password from
-      // any other route (especially '/' after router recreation).
-      if (isRecovery) return AppRoutes.resetPassword;
-
-      if (authState.isLoading || seenOnboarding == null) return null;
-
-      final isAuthenticated = authState.value != null;
-      final isAuthRoute =
-          location == AppRoutes.login ||
-          location == AppRoutes.signup ||
-          location == AppRoutes.forgotPassword;
-      final isOnboarding = location == AppRoutes.onboarding;
-      final isRoot = location == AppRoutes.root;
-
-      if (isRoot) {
-        if (!seenOnboarding) return AppRoutes.onboarding;
-        return isAuthenticated ? AppRoutes.home : AppRoutes.login;
-      }
-
-      if (isAuthenticated && isAuthRoute) return AppRoutes.home;
-
-      if (!isAuthenticated && !isAuthRoute && !isOnboarding) {
-        return AppRoutes.login;
-      }
-
-      return null;
+      final authState = ref.read(authStateProvider);
+      return appRedirect(
+        location: state.uri.path,
+        authLoading: authState.isLoading,
+        isAuthenticated: authState.value != null,
+        seenOnboarding: ref.read(seenOnboardingProvider).value,
+        isRecovery: ref.read(passwordRecoveryProvider),
+      );
     },
     errorBuilder: (context, state) =>
         const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -163,4 +189,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  ref.onDispose(router.dispose);
+  return router;
 });
