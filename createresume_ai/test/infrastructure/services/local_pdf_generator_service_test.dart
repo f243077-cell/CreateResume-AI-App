@@ -10,6 +10,9 @@ import 'package:createresume_app/infrastructure/services/local_pdf_generator_ser
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  // rootBundle (the embedded font) needs the services binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   const user = User(
     id: 'u1',
     email: 'jose.munoz@mail.test',

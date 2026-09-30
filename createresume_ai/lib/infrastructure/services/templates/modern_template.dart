@@ -11,6 +11,7 @@ import '../../../domain/entities/education.dart';
 import '../../../domain/entities/skill.dart';
 import '../../../domain/entities/project.dart';
 import '../../../domain/entities/honor.dart';
+import 'pdf_text.dart';
 import 'resume_template_base.dart';
 
 class ModernTemplate implements ResumeTemplateBase {
@@ -23,30 +24,9 @@ class ModernTemplate implements ResumeTemplateBase {
   static const PdfColor _midGrey   = PdfColor.fromInt(0xFF777777);
   static const PdfColor _offWhite  = PdfColor.fromInt(0xFFF4F4F4);
 
-  /// Replaces Unicode punctuation/symbols that the default PDF font can't
-  /// render with safe ASCII equivalents, then strips any remaining
-  /// character outside the safe printable range as a catch-all — this
-  /// guarantees no "tofu" boxes regardless of what symbols the AI outputs.
-  static String _sanitize(String text) {
-    var result = text
-        .replaceAll('\u2013', '-')   // – en dash
-        .replaceAll('\u2014', '-')   // — em dash
-        .replaceAll('\u2011', '-')   // ‑ non-breaking hyphen
-        .replaceAll('\u2018', "'")   // ' left single quote
-        .replaceAll('\u2019', "'")   // ' right single quote
-        .replaceAll('\u201C', '"')   // " left double quote
-        .replaceAll('\u201D', '"')   // " right double quote
-        .replaceAll('\u2026', '...') // … ellipsis
-        .replaceAll('\u00A0', ' ')   // non-breaking space
-        .replaceAll(RegExp(r'[\u2022\u2023\u25E6\u2043\u2219\u25AA\u25CF\u25A0\u2192\u2794\u27A4]'), '-');
-
-    result = result.replaceAllMapped(RegExp(r'[^\x20-\x7E\xA0-\xFF]'), (m) => ' ');
-    return result;
-  }
-
   @override
-  Future<pw.Document> generate(ResumeData resume) async {
-    final doc = pw.Document();
+  Future<pw.Document> generate(ResumeData resume, {pw.ThemeData? theme}) async {
+    final doc = pw.Document(theme: theme);
 
     doc.addPage(
       pw.Page(
@@ -88,13 +68,13 @@ class ModernTemplate implements ResumeTemplateBase {
                   pw.SizedBox(height: 14),
 
                   pw.Text(
-                    _sanitize(resume.fullName),
+                    PdfTextSanitizer.clean(resume.fullName),
                     style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: _white),
                   ),
                   if (resume.jobTitle != null) ...[
                     pw.SizedBox(height: 3),
                     pw.Text(
-                      _sanitize(resume.jobTitle!),
+                      PdfTextSanitizer.clean(resume.jobTitle!),
                       style: const pw.TextStyle(fontSize: 9.5, color: _sideText),
                     ),
                   ],
@@ -118,7 +98,7 @@ class ModernTemplate implements ResumeTemplateBase {
                   if (resume.summary != null) ...[
                     _sideHeader('PROFILE'),
                     pw.Text(
-                      _sanitize(resume.summary!),
+                      PdfTextSanitizer.clean(resume.summary!),
                       style: const pw.TextStyle(fontSize: 8.5, color: _sideText, lineSpacing: 1.5),
                     ),
                     pw.SizedBox(height: 16),
@@ -131,7 +111,7 @@ class ModernTemplate implements ResumeTemplateBase {
                     for (final entry in groupSkillsByCategory(resume.skills).entries) ...[
                       pw.Padding(
                         padding: const pw.EdgeInsets.only(bottom: 4),
-                        child: pw.Text(_sanitize(entry.key), style: const pw.TextStyle(fontSize: 7.5, color: _accent)),
+                        child: pw.Text(PdfTextSanitizer.clean(entry.key), style: const pw.TextStyle(fontSize: 7.5, color: _accent)),
                       ),
                       ...entry.value.map((s) => _sideSkillItem(s)),
                     ],
@@ -224,7 +204,7 @@ class ModernTemplate implements ResumeTemplateBase {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(label, style: const pw.TextStyle(fontSize: 7.5, color: _accent)),
-          pw.Text(_sanitize(text), style: const pw.TextStyle(fontSize: 8.5, color: _sideText)),
+          pw.Text(PdfTextSanitizer.clean(text), style: const pw.TextStyle(fontSize: 8.5, color: _sideText)),
         ],
       ),
     );
@@ -243,7 +223,7 @@ class ModernTemplate implements ResumeTemplateBase {
           ),
           pw.Expanded(
             child: pw.Text(
-              _sanitize(skill.name),
+              PdfTextSanitizer.clean(skill.name),
               style: const pw.TextStyle(fontSize: 8.5, color: _sideText, lineSpacing: 1.3),
             ),
           ),
@@ -284,11 +264,11 @@ class ModernTemplate implements ResumeTemplateBase {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            _sanitize(exp.company),
+            PdfTextSanitizer.clean(exp.company),
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5, color: _black),
           ),
           pw.Text(
-            '${_sanitize(exp.role)}  |  ${_dateRange(exp.startDate, exp.endDate, exp.isCurrent)}',
+            '${PdfTextSanitizer.clean(exp.role)}  |  ${_dateRange(exp.startDate, exp.endDate, exp.isCurrent)}',
             style: const pw.TextStyle(fontSize: 9, color: _midGrey),
           ),
           if (bullets.isNotEmpty) ...[
@@ -302,7 +282,7 @@ class ModernTemplate implements ResumeTemplateBase {
                     pw.Text('-  ', style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
                     pw.Expanded(
                       child: pw.Text(
-                        _sanitize(line.replaceAll(RegExp(r'^[\-\*]\s*'), '')),
+                        PdfTextSanitizer.bullet(line),
                         style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.45, color: _darkGrey),
                       ),
                     ),
@@ -328,16 +308,16 @@ class ModernTemplate implements ResumeTemplateBase {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text(_sanitize(proj.name), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black)),
+                pw.Text(PdfTextSanitizer.clean(proj.name), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black)),
                 if (proj.url != null && proj.url!.isNotEmpty)
                   pw.Text('GitHub', style: const pw.TextStyle(fontSize: 8.5, color: _accent)),
               ],
             ),
             if (proj.techStack.isNotEmpty)
-              pw.Text(_sanitize(proj.techStack.join(', ')), style: pw.TextStyle(fontSize: 8.5, color: _midGrey, fontStyle: pw.FontStyle.italic)),
+              pw.Text(PdfTextSanitizer.clean(proj.techStack.join(', ')), style: pw.TextStyle(fontSize: 8.5, color: _midGrey, fontStyle: pw.FontStyle.italic)),
             if (proj.description.isNotEmpty) ...[
               pw.SizedBox(height: 3),
-              pw.Text(_sanitize(proj.description), style: const pw.TextStyle(fontSize: 9, lineSpacing: 1.4, color: _darkGrey)),
+              pw.Text(PdfTextSanitizer.clean(proj.description), style: const pw.TextStyle(fontSize: 9, lineSpacing: 1.4, color: _darkGrey)),
             ],
           ],
         ),
@@ -351,11 +331,11 @@ class ModernTemplate implements ResumeTemplateBase {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(_sanitize('${edu.degree}${edu.field.isNotEmpty ? ' - ${edu.field}' : ''}'), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black)),
+          pw.Text(PdfTextSanitizer.clean('${edu.degree}${edu.field.isNotEmpty ? ' - ${edu.field}' : ''}'), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black)),
           pw.Text(
             edu.endDate != null
-                ? '${_sanitize(edu.institution)}  |  ${edu.startDate.year} - ${edu.endDate!.year}'
-                : _sanitize(edu.institution),
+                ? '${PdfTextSanitizer.clean(edu.institution)}  |  ${edu.startDate.year} - ${edu.endDate!.year}'
+                : PdfTextSanitizer.clean(edu.institution),
             style: const pw.TextStyle(fontSize: 9, color: _midGrey),
           ),
         ],
@@ -375,12 +355,12 @@ class ModernTemplate implements ResumeTemplateBase {
               text: pw.TextSpan(
                 children: [
                   pw.TextSpan(
-                    text: _sanitize(honor.title),
+                    text: PdfTextSanitizer.clean(honor.title),
                     style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: _black),
                   ),
                   if (honor.description != null && honor.description!.isNotEmpty)
                     pw.TextSpan(
-                      text: ' - ${_sanitize(honor.description!)}',
+                      text: ' - ${PdfTextSanitizer.clean(honor.description!)}',
                       style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey),
                     ),
                 ],

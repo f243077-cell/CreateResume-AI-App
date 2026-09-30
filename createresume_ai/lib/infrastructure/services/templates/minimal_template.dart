@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../../domain/entities/honor.dart';
 import '../../../domain/entities/skill.dart';
+import 'pdf_text.dart';
 import 'resume_template_base.dart';
 
 class MinimalTemplate implements ResumeTemplateBase {
@@ -17,30 +18,9 @@ class MinimalTemplate implements ResumeTemplateBase {
   static const PdfColor _sectionBg = PdfColor.fromInt(0xFFEFEFEF);
  
 
-  /// Replaces Unicode punctuation/symbols that the default PDF font can't
-  /// render with safe ASCII equivalents, then strips any remaining
-  /// character outside the safe printable range as a catch-all — this
-  /// guarantees no "tofu" boxes regardless of what symbols the AI outputs.
-  static String _sanitize(String text) {
-    var result = text
-        .replaceAll('\u2013', '-')
-        .replaceAll('\u2014', '-')
-        .replaceAll('\u2011', '-')
-        .replaceAll('\u2018', "'")
-        .replaceAll('\u2019', "'")
-        .replaceAll('\u201C', '"')
-        .replaceAll('\u201D', '"')
-        .replaceAll('\u2026', '...')
-        .replaceAll('\u00A0', ' ')
-        .replaceAll(RegExp(r'[\u2022\u2023\u25E6\u2043\u2219\u25AA\u25CF\u25A0\u2192\u2794\u27A4]'), '-');
-
-    result = result.replaceAllMapped(RegExp(r'[^\x20-\x7E\xA0-\xFF]'), (m) => ' ');
-    return result;
-  }
-
   @override
-  Future<pw.Document> generate(ResumeData resume) async {
-    final doc = pw.Document();
+  Future<pw.Document> generate(ResumeData resume, {pw.ThemeData? theme}) async {
+    final doc = pw.Document(theme: theme);
 
     doc.addPage(
       pw.MultiPage(
@@ -53,21 +33,21 @@ class MinimalTemplate implements ResumeTemplateBase {
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               pw.Text(
-                _sanitize(resume.fullName).toUpperCase(),
+                PdfTextSanitizer.clean(resume.fullName).toUpperCase(),
                 textAlign: pw.TextAlign.center,
                 style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: _black, letterSpacing: 1.2),
               ),
               if (resume.jobTitle != null) ...[
                 pw.SizedBox(height: 3),
                 pw.Text(
-                  _sanitize(resume.jobTitle!),
+                  PdfTextSanitizer.clean(resume.jobTitle!),
                   textAlign: pw.TextAlign.center,
                   style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: _darkGrey),
                 ),
               ],
               pw.SizedBox(height: 8),
               pw.Text(
-                _sanitize(_buildContactLine(resume)),
+                PdfTextSanitizer.clean(_buildContactLine(resume)),
                 textAlign: pw.TextAlign.center,
                 style: const pw.TextStyle(fontSize: 9, color: _midGrey),
               ),
@@ -81,7 +61,7 @@ class MinimalTemplate implements ResumeTemplateBase {
             pw.Padding(
               padding: const pw.EdgeInsets.only(top: 8, bottom: 14),
               child: pw.Text(
-                _sanitize(resume.summary!),
+                PdfTextSanitizer.clean(resume.summary!),
                 textAlign: pw.TextAlign.justify,
                 style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.5, color: _darkGrey),
               ),
@@ -116,7 +96,7 @@ class MinimalTemplate implements ResumeTemplateBase {
             for (final entry in groupSkillsByCategory(resume.skills).entries) ...[
               pw.Padding(
                 padding: const pw.EdgeInsets.only(bottom: 3),
-                child: pw.Text(_sanitize(entry.key), style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: _black)),
+                child: pw.Text(PdfTextSanitizer.clean(entry.key), style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: _black)),
               ),
               _skillsGrid(entry.value),
               pw.SizedBox(height: 4),
@@ -174,7 +154,7 @@ class MinimalTemplate implements ResumeTemplateBase {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text(_sanitize('${exp.role}, ${exp.company}'), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black)),
+              pw.Text(PdfTextSanitizer.clean('${exp.role}, ${exp.company}'), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black)),
               pw.Text('$startDate - $endDate', style: const pw.TextStyle(fontSize: 9, color: _midGrey)),
             ],
           ),
@@ -189,7 +169,7 @@ class MinimalTemplate implements ResumeTemplateBase {
                     pw.Text('-  ', style: const pw.TextStyle(fontSize: 9, color: _darkGrey)),
                     pw.Expanded(
                       child: pw.Text(
-                        _sanitize(line.replaceAll(RegExp(r'^[\-\*]\s*'), '')),
+                        PdfTextSanitizer.bullet(line),
                         style: const pw.TextStyle(fontSize: 9, lineSpacing: 1.4, color: _darkGrey),
                       ),
                     ),
@@ -217,7 +197,7 @@ class MinimalTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                _sanitize(field != null && field.isNotEmpty ? '$degree' : degree),
+                PdfTextSanitizer.clean(field != null && field.isNotEmpty ? '$degree' : degree),
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black),
               ),
               pw.Text(
@@ -226,9 +206,9 @@ class MinimalTemplate implements ResumeTemplateBase {
               ),
             ],
           ),
-          pw.Text(_sanitize(edu.institution), style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
+          pw.Text(PdfTextSanitizer.clean(edu.institution), style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey)),
           if (field != null && field.isNotEmpty)
-            pw.Text(_sanitize('Major in $field'), style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
+            pw.Text(PdfTextSanitizer.clean('Major in $field'), style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
           if (gpa != null)
             pw.Text('Final CGPA: $gpa', style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
         ],
@@ -245,11 +225,11 @@ class MinimalTemplate implements ResumeTemplateBase {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(_sanitize(proj.name), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black)),
+          pw.Text(PdfTextSanitizer.clean(proj.name), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black)),
           if (description != null && description.isNotEmpty)
-            pw.Text(_sanitize(description), style: const pw.TextStyle(fontSize: 9, color: _darkGrey, lineSpacing: 1.4)),
+            pw.Text(PdfTextSanitizer.clean(description), style: const pw.TextStyle(fontSize: 9, color: _darkGrey, lineSpacing: 1.4)),
           if (techStack.isNotEmpty)
-            pw.Text(_sanitize(techStack.join(', ')), style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
+            pw.Text(PdfTextSanitizer.clean(techStack.join(', ')), style: const pw.TextStyle(fontSize: 8.5, color: _midGrey)),
         ],
       ),
     );
@@ -267,12 +247,12 @@ class MinimalTemplate implements ResumeTemplateBase {
               text: pw.TextSpan(
                 children: [
                   pw.TextSpan(
-                    text: _sanitize(honor.title),
+                    text: PdfTextSanitizer.clean(honor.title),
                     style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: _black),
                   ),
                   if (honor.description != null && honor.description!.isNotEmpty)
                     pw.TextSpan(
-                      text: ' - ${_sanitize(honor.description!)}',
+                      text: ' - ${PdfTextSanitizer.clean(honor.description!)}',
                       style: const pw.TextStyle(fontSize: 9, color: _darkGrey),
                     ),
                 ],
@@ -303,7 +283,7 @@ class MinimalTemplate implements ResumeTemplateBase {
                 children: [
                   pw.Text('-  ', style: const pw.TextStyle(fontSize: 9, color: _darkGrey)),
                   pw.Expanded(
-                    child: pw.Text(_sanitize(s.name), style: const pw.TextStyle(fontSize: 9, color: _darkGrey)),
+                    child: pw.Text(PdfTextSanitizer.clean(s.name), style: const pw.TextStyle(fontSize: 9, color: _darkGrey)),
                   ),
                 ],
               ),

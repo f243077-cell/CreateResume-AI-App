@@ -54,5 +54,7 @@ Map<String, List<Skill>> groupSkillsByCategory(List<Skill> skills) {
 }
 
 abstract class ResumeTemplateBase {
-  Future<pw.Document> generate(ResumeData resume);
+  /// Builds the document. [theme] carries the embedded fonts; without it
+  /// the pdf package's built-in Helvetica is used.
+  Future<pw.Document> generate(ResumeData resume, {pw.ThemeData? theme});
 }

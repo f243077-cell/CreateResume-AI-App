@@ -9,6 +9,7 @@ import '../../../domain/entities/education.dart';
 import '../../../domain/entities/skill.dart';
 import '../../../domain/entities/project.dart';
 import '../../../domain/entities/honor.dart';
+import 'pdf_text.dart';
 import 'resume_template_base.dart';
 
 class ClassicTemplate implements ResumeTemplateBase {
@@ -18,40 +19,9 @@ class ClassicTemplate implements ResumeTemplateBase {
   static const PdfColor _divider  = PdfColor.fromInt(0xFF222222);
   static const PdfColor _link     = PdfColor.fromInt(0xFF1155CC);
 
- static String _sanitize(String text) {
-    var result = text
-        .replaceAll('\u2010', '-')  // ‐ hyphen
-        .replaceAll('\u2011', '-')  // ‑ non-breaking hyphen
-        .replaceAll('\u2012', '-')  // ‒ figure dash
-        .replaceAll('\u2013', '-')  // – en dash
-        .replaceAll('\u2014', '-')  // — em dash
-        .replaceAll('\u2015', '-')  // ― horizontal bar
-        .replaceAll('\u2212', '-')  // − minus sign
-        .replaceAll('\u2018', "'")  // ' left single quote
-        .replaceAll('\u2019', "'")  // ' right single quote
-        .replaceAll('\u201C', '"')  // " left double quote
-        .replaceAll('\u201D', '"')  // " right double quote
-        .replaceAll('\u2026', '...') // … ellipsis
-        .replaceAll('\u00A0', ' ')  // non-breaking space
-        .replaceAll('\u00AD', '')   // soft hyphen (invisible, just drop it)
-        .replaceAll('\u2022', '-'); // • bullet (we render our own bullets separately)
-
-    // Final catch-all: strip any remaining character outside the
-    // range Helvetica can reliably render (basic Latin + Latin-1
-    // supplement covers accented letters like é, ñ, ü, etc.).
-    // This removes emoji and any other exotic symbols the AI might
-    // generate, which would otherwise render as "tofu" boxes.
-    result = result.replaceAll(RegExp(r'[^\x20-\x7E\u00A1-\u00FF]'), '');
-
-    // Collapse any double spaces left behind by stripped characters.
-    result = result.replaceAll(RegExp(r' {2,}'), ' ').trim();
-
-    return result;
-  }
-
   @override
-  Future<pw.Document> generate(ResumeData resume) async {
-    final doc = pw.Document();
+  Future<pw.Document> generate(ResumeData resume, {pw.ThemeData? theme}) async {
+    final doc = pw.Document(theme: theme);
 
     doc.addPage(
       pw.MultiPage(
@@ -63,7 +33,7 @@ class ClassicTemplate implements ResumeTemplateBase {
           if (resume.summary != null && resume.summary!.trim().isNotEmpty) ...[
             _sectionHeader('SUMMARY'),
             pw.Text(
-              _sanitize(resume.summary!.trim()),
+              PdfTextSanitizer.clean(resume.summary!.trim()),
               textAlign: pw.TextAlign.justify,
               style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 1.15, color: _darkGrey),
             ),
@@ -128,13 +98,13 @@ class ClassicTemplate implements ResumeTemplateBase {
         if (resume.jobTitle != null && resume.jobTitle!.isNotEmpty) ...[
           pw.SizedBox(height: 2),
           pw.Text(
-            _sanitize(resume.jobTitle!),
+            PdfTextSanitizer.clean(resume.jobTitle!),
             style: pw.TextStyle(fontSize: 10.5, color: _darkGrey, fontStyle: pw.FontStyle.italic),
           ),
         ],
         pw.SizedBox(height: 4),
         pw.Text(
-          _sanitize(contactParts.join('   |   ')),
+          PdfTextSanitizer.clean(contactParts.join('   |   ')),
           textAlign: pw.TextAlign.center,
           style: const pw.TextStyle(fontSize: 8.5, color: _midGrey),
         ),
@@ -202,7 +172,7 @@ class ClassicTemplate implements ResumeTemplateBase {
                   style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: _black),
                 ),
                 pw.TextSpan(
-                  text: _sanitize(names),
+                  text: PdfTextSanitizer.clean(names),
                   style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey),
                 ),
               ],
@@ -231,7 +201,7 @@ class ClassicTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                _sanitize(exp.company),
+                PdfTextSanitizer.clean(exp.company),
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black),
               ),
               pw.Text(
@@ -241,7 +211,7 @@ class ClassicTemplate implements ResumeTemplateBase {
             ],
           ),
           pw.Text(
-            _sanitize(exp.role),
+            PdfTextSanitizer.clean(exp.role),
             style: pw.TextStyle(fontSize: 9.5, color: _darkGrey, fontStyle: pw.FontStyle.italic),
           ),
           pw.SizedBox(height: 2),
@@ -264,12 +234,12 @@ class ClassicTemplate implements ResumeTemplateBase {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            _sanitize(proj.name),
+            PdfTextSanitizer.clean(proj.name),
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black),
           ),
           if (proj.techStack.isNotEmpty)
             pw.Text(
-              _sanitize(proj.techStack.join(', ')),
+              PdfTextSanitizer.clean(proj.techStack.join(', ')),
               style: pw.TextStyle(fontSize: 9, color: _darkGrey, fontStyle: pw.FontStyle.italic),
             ),
           pw.SizedBox(height: 2),
@@ -291,7 +261,7 @@ class ClassicTemplate implements ResumeTemplateBase {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                _sanitize(edu.institution),
+                PdfTextSanitizer.clean(edu.institution),
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: _black),
               ),
               pw.Text(
@@ -301,7 +271,7 @@ class ClassicTemplate implements ResumeTemplateBase {
             ],
           ),
           pw.Text(
-            _sanitize('${edu.degree} in ${edu.field}'),
+            PdfTextSanitizer.clean('${edu.degree} in ${edu.field}'),
             style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey),
           ),
           if (edu.gpa != null)
@@ -325,12 +295,12 @@ class ClassicTemplate implements ResumeTemplateBase {
               text: pw.TextSpan(
                 children: [
                   pw.TextSpan(
-                    text: _sanitize(honor.title),
+                    text: PdfTextSanitizer.clean(honor.title),
                     style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: _black),
                   ),
                   if (honor.description != null && honor.description!.isNotEmpty)
                     pw.TextSpan(
-                      text: ' - ${_sanitize(honor.description!)}',
+                      text: ' - ${PdfTextSanitizer.clean(honor.description!)}',
                       style: const pw.TextStyle(fontSize: 9.5, color: _darkGrey),
                     ),
                 ],
@@ -358,7 +328,7 @@ class ClassicTemplate implements ResumeTemplateBase {
           _bulletDot(),
           pw.Expanded(
             child: pw.Text(
-              _sanitize(line.replaceAll(RegExp(r'^[\u2022\-\*]\s*'), '')),
+              PdfTextSanitizer.bullet(line),
               style: const pw.TextStyle(fontSize: 9, lineSpacing: 1.1, color: _darkGrey),
             ),
           ),
