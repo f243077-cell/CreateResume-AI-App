@@ -127,6 +127,9 @@ coverage/
 !.env.example
 *.env.local
 
+# Local build-time config (see env.example.json)
+env.json
+
 # Supabase: functions, migrations and config.toml are versioned; only local
 # CLI state is ignored.
 supabase/.temp/

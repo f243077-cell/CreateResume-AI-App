@@ -1,7 +1,6 @@
 // File: lib/main.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,12 +9,26 @@ import 'app_router.dart';
 import 'core/routing/app_routes.dart';
 import 'core/theme/app_theme.dart';
 
+// Supplied at build time with --dart-define-from-file=env.json, so no
+// config file is bundled into the app as an asset.
+const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+String _requireDefine(String name, String value) {
+  if (value.isEmpty) {
+    throw StateError(
+      '$name is not set. Copy env.example.json to env.json, fill it in, and '
+      'run with --dart-define-from-file=env.json.',
+    );
+  }
+  return value;
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
   await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    publishableKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    url: _requireDefine('SUPABASE_URL', _supabaseUrl),
+    publishableKey: _requireDefine('SUPABASE_ANON_KEY', _supabaseAnonKey),
   );
   await Hive.initFlutter();
   runApp(const ProviderScope(child: CreateResumeApp()));

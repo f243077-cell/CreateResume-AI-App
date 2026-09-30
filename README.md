@@ -74,7 +74,7 @@ supabase/
 3. **Configure Supabase**
    - Create a `profiles` table with columns: `id`, `email`, `full_name`, `photo_url`, `subscription_status`, `credit_balance`, `ai_writing_style`, `theme_preference`.
    - Set up authentication (Email/Password and Google OAuth).
-   - Add your Supabase URL and anon key to the app's Supabase initialization (typically in `main.dart`).
+   - Copy `createresume_ai/env.example.json` to `createresume_ai/env.json` and fill in your Supabase URL and anon key. `env.json` is gitignored.
 
 4. **Deploy the Edge Function**
    ```bash
@@ -87,15 +87,16 @@ supabase/
 
 5. **Run the app**
    ```bash
-   flutter run
+   flutter run --dart-define-from-file=env.json
    ```
+   (The VS Code launch configuration in `.vscode/launch.json` passes this for you.)
 
 ## Environment & Secrets
 
 This project keeps sensitive configuration out of version control:
 
-- Supabase credentials should be set via your platform's secure config (not committed).
-- `OPENROUTER_API_KEY` is stored as a Supabase Edge Function secret, never in client code.
+- Supabase URL and anon key are compiled in from `env.json` with `--dart-define-from-file`; nothing is bundled as an asset. Only put public values there.
+- `OPENROUTER_API_KEY` is stored as a Supabase Edge Function secret, never in client code or `env.json`.
 - Edge Function source lives in `createresume_ai/supabase/functions/` and is versioned; only local CLI state (`supabase/.temp/`) is ignored.
 
 ## Architecture Notes
