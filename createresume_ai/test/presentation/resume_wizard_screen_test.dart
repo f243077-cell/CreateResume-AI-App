@@ -69,8 +69,8 @@ void main() {
     await pumpWizard(tester);
 
     fake.emit(const AsyncValue.loading());
-    fake.emit(AsyncValue.error(
-      const InsufficientCreditsFailure(requested: 2, available: 1),
+    fake.emit(const AsyncValue.error(
+      InsufficientCreditsFailure(requested: 2, available: 1),
       StackTrace.empty,
     ));
     await tester.pumpAndSettle();
@@ -98,7 +98,7 @@ void main() {
   testWidgets('other failures show the failure message', (tester) async {
     await pumpWizard(tester);
 
-    fake.emit(AsyncValue.error(const ServerFailure('AI down'), StackTrace.empty));
+    fake.emit(const AsyncValue.error(ServerFailure('AI down'), StackTrace.empty));
     await tester.pumpAndSettle();
 
     expect(find.text('Failed to generate resume: AI down'), findsOneWidget);

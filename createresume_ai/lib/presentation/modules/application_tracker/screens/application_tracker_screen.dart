@@ -27,7 +27,7 @@ class ApplicationTrackerScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.work_outline_rounded,
                         size: 64,
                         color: AppColors.textTertiary,
@@ -158,7 +158,7 @@ class ApplicationTrackerScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ShimmerCard(height: 48),
+                  const ShimmerCard(height: 48),
                   const SizedBox(height: 16),
                   Expanded(
                     child: ListView.separated(
@@ -166,7 +166,7 @@ class ApplicationTrackerScreen extends ConsumerWidget {
                       itemCount: 3,
                       separatorBuilder: (context, index) =>
                           const SizedBox(height: 12),
-                      itemBuilder: (context, index) => ShimmerCard(height: 80),
+                      itemBuilder: (context, index) => const ShimmerCard(height: 80),
                     ),
                   ),
                 ],

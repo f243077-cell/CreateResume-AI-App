@@ -1,8 +1,9 @@
-import 'package:createresume_app/presentation/modules/home_dashboard/providers/home_dashboard_notifier.dart';
-import 'package:createresume_app/presentation/widgets/shimmer_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../widgets/shimmer_skeleton.dart';
+import '../providers/home_dashboard_notifier.dart';
 
 import '../../../../core/routing/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -20,14 +21,14 @@ class HomeDashboardScreen extends ConsumerWidget {
         child: RefreshIndicator(
           color: AppColors.burntOrange,
           onRefresh: () => ref.read(homeDashboardProvider.notifier).refresh(),
-          child: CustomScrollView(
+          child: const CustomScrollView(
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-                sliver: const SliverToBoxAdapter(child: _DashboardHeader()),
+                padding: EdgeInsets.fromLTRB(24, 20, 24, 8),
+                sliver: SliverToBoxAdapter(child: _DashboardHeader()),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                padding: EdgeInsets.fromLTRB(24, 24, 24, 24),
                 sliver: SliverToBoxAdapter(child: _BentoGrid()),
               ),
             ],
@@ -144,11 +145,11 @@ class _DashboardHeader extends ConsumerWidget {
   }
 
   Widget _buildHeaderSkeleton() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ShimmerSkeleton(width: 100, height: 14),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         ShimmerSkeleton(width: 180, height: 34),
       ],
     );

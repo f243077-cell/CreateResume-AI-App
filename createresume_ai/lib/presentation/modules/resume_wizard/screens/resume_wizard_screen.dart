@@ -83,8 +83,8 @@ class _ResumeWizardScreenState extends ConsumerState<ResumeWizardScreen> {
       resumeWizardProvider.select((s) => s.careerStage),
     );
 
-    // Call the new AI generation provider
-    ref
+    // Call the new AI generation provider; the listener in build reacts.
+    await ref
         .read(resumeGenerationProvider.notifier)
         .generateResume(
           description: _descriptionController.text,

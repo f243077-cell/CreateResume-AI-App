@@ -1,5 +1,7 @@
 // File: lib/main.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -39,17 +41,25 @@ class CreateResumeApp extends ConsumerStatefulWidget {
 }
 
 class _CreateResumeAppState extends ConsumerState<CreateResumeApp> {
+  StreamSubscription<AuthState>? _authSubscription;
+
   @override
   void initState() {
     super.initState();
 
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.passwordRecovery) {
         // The router listens to this flag and redirects to reset-password;
         // it is no longer rebuilt, so no manual navigation is needed.
         ref.read(passwordRecoveryProvider.notifier).set(true);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   @override

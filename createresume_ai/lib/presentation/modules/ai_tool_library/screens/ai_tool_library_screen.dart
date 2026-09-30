@@ -66,7 +66,7 @@ class AiToolLibraryScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
+                          gradient: const LinearGradient(
                             colors: [AppColors.navy800, AppColors.blue400],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -79,7 +79,7 @@ class AiToolLibraryScreen extends ConsumerWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'Available Credits',
                                   style: TextStyle(color: AppColors.white70, fontSize: 14),
                                 ),

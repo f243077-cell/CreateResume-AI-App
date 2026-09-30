@@ -62,7 +62,7 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [AppColors.navy800, AppColors.blue400],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -305,9 +305,9 @@ class ResumeAnalyzerScreen extends ConsumerWidget {
             borderRadius: BorderRadius.circular(60),
           ),
           const SizedBox(height: 24),
-          ShimmerSkeleton(width: 200, height: 24),
+          const ShimmerSkeleton(width: 200, height: 24),
           const SizedBox(height: 8),
-          ShimmerSkeleton(width: 150, height: 16),
+          const ShimmerSkeleton(width: 150, height: 16),
         ],
       ),
     );

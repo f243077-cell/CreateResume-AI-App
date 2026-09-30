@@ -1,5 +1,7 @@
 // File: lib/presentation/modules/onboarding/onboarding_screen.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -56,10 +58,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _onNext() async {
     final currentIndex = ref.read(onboardingProvider);
     if (currentIndex < _slides.length - 1) {
-      _pageController.nextPage(
+      // The page animation runs on its own; nothing waits for it.
+      unawaited(_pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
-      );
+      ));
     } else {
       await _markSeen();
       if (mounted) context.goNamed(AppRouteNames.login);

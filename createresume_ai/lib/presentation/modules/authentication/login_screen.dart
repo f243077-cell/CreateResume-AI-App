@@ -328,8 +328,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildLabel(String text) {
     return Text(
       text,
-      style: TextStyle(
-        color: const Color(0xFF3D2418),
+      style: const TextStyle(
+        color: Color(0xFF3D2418),
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
@@ -381,15 +381,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.burntOrange, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.burntOrange, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.error),
+          borderSide: const BorderSide(color: AppColors.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.error, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
         errorStyle: const TextStyle(color: AppColors.error),
       ),

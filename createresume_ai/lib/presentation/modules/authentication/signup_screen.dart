@@ -120,11 +120,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
+                const Text(
                   'Start building your professional resume today.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: const Color.fromARGB(
+                    color: Color.fromARGB(
                       255,
                       231,
                       229,
@@ -303,8 +303,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Widget _buildLabel(String text) {
     return Text(
       text,
-      style: TextStyle(
-        color: const Color(0xFF3D2418), // dark brown — vanilla pe dikhega
+      style: const TextStyle(
+        color: Color(0xFF3D2418), // dark brown — vanilla pe dikhega
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
@@ -356,7 +356,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.burntOrange, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.burntOrange, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

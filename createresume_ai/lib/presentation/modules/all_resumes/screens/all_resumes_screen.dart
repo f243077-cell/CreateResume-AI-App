@@ -91,7 +91,7 @@ class AllResumesScreen extends ConsumerWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.vanilla,
                   shape: BoxShape.circle,
                 ),

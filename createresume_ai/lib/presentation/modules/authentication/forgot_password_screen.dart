@@ -149,10 +149,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
+                      const Text(
                         'Email Address',
                         style: TextStyle(
-                          color: const Color(0xFF3D2418),
+                          color: Color(0xFF3D2418),
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -197,7 +197,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
+                            borderSide: const BorderSide(
                               color: AppColors.burntOrange,
                               width: 1.5,
                             ),

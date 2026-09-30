@@ -249,7 +249,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
                   child: pw.Row(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('- ', style: pw.TextStyle(fontSize: 8.5, color: _gold)),
+                      pw.Text('- ', style: const pw.TextStyle(fontSize: 8.5, color: _gold)),
                       pw.Expanded(
                         child: pw.Text(
                           PdfTextSanitizer.bullet(line),
@@ -386,7 +386,7 @@ class ExecutiveTemplate implements ResumeTemplateBase {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text('- ', style: pw.TextStyle(fontSize: 8.5, color: _gold)),
+          pw.Text('- ', style: const pw.TextStyle(fontSize: 8.5, color: _gold)),
           pw.Expanded(
             child: pw.RichText(
               text: pw.TextSpan(

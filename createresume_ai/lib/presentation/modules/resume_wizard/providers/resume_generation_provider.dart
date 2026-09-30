@@ -57,7 +57,7 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
       final user = ref.read(authStateProvider).value;
       if (user == null) {
         state = AsyncValue.error(
-          ServerFailure('User not authenticated'),
+          const ServerFailure('User not authenticated'),
           StackTrace.current,
         );
         return;

@@ -34,19 +34,19 @@ class ScaffoldWithNavBar extends ConsumerWidget {
       body: Column(
         children: [
           if (!isOnline)
-            MaterialBanner(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              content: const Text(
+            const MaterialBanner(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              content: Text(
                 'Offline — changes will sync when you reconnect',
                 style: TextStyle(color: Colors.white, fontSize: 13),
               ),
-              leading: const Icon(
+              leading: Icon(
                 Icons.wifi_off_rounded,
                 color: Colors.white,
                 size: 20,
               ),
               backgroundColor: AppColors.warning,
-              actions: const [SizedBox.shrink()],
+              actions: [SizedBox.shrink()],
             ),
           Expanded(child: navigationShell),
         ],
