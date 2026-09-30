@@ -108,12 +108,12 @@ void main() {
       expect(sentHeaders(), hasLength(1));
     });
 
-    test('5xx is retried with the same Idempotency-Key', () async {
+    test('5xx is retried once (AI calls) with the same Idempotency-Key', () async {
       failWith(502, {'error': 'all models down'});
       final result = await service.rewriteBullet('x');
       expect(result.isLeft(), isTrue);
       final headers = sentHeaders();
-      expect(headers, hasLength(3));
+      expect(headers, hasLength(2));
       final keys = headers.map((h) => h['Idempotency-Key']).toSet();
       expect(keys, hasLength(1));
       expect(keys.single, matches(RegExp(r'^[0-9a-f-]{36}$')));
