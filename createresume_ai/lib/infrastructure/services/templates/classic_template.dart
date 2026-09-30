@@ -78,6 +78,7 @@ class ClassicTemplate implements ResumeTemplateBase {
     final contactParts = <String>[];
     if (resume.phone != null && resume.phone!.isNotEmpty) contactParts.add(resume.phone!);
     contactParts.add(resume.email);
+    if (resume.location != null && resume.location!.isNotEmpty) contactParts.add(resume.location!);
     if (resume.linkedin != null && resume.linkedin!.isNotEmpty) contactParts.add('LinkedIn: ${resume.linkedin}');
     if (resume.github != null && resume.github!.isNotEmpty) contactParts.add('GitHub: ${resume.github}');
     if (resume.leetcode != null && resume.leetcode!.isNotEmpty) contactParts.add('LeetCode: ${resume.leetcode}');

@@ -52,4 +52,5 @@ void main() {
     expect(raw, contains('NotoSans'));
     expect(raw, isNot(contains('/Helvetica')));
   });
+
 }
