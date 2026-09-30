@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:printing/printing.dart';
 import '../../../../application/providers/auth_state_provider.dart';
 import '../../../../core/constants/template_ids.dart';
@@ -11,55 +10,100 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../domain/entities/resume.dart';
 import '../../../../infrastructure/services/local_pdf_generator_service.dart';
 
-class ResumeEditorNotifier extends StateNotifier<AsyncValue<Resume>> {
-  final Ref _ref;
-  final String _resumeId;
+/// Autosave state shown in the editor's app bar.
+enum SaveStatus { idle, saving, saved, error }
+
+class EditorSaveStatusNotifier extends Notifier<SaveStatus> {
+  EditorSaveStatusNotifier(this.resumeId);
+
+  final String resumeId;
+
+  @override
+  SaveStatus build() => SaveStatus.idle;
+
+  void set(SaveStatus value) => state = value;
+}
+
+/// Save status per resume ID.
+final editorSaveStatusProvider = NotifierProvider.autoDispose
+    .family<EditorSaveStatusNotifier, SaveStatus, String>(EditorSaveStatusNotifier.new);
+
+/// Loads one resume for editing and autosaves changes.
+///
+/// Edits are saved [saveDebounce] after the last change, immediately on
+/// [flush] (leaving the screen, app pause) and, as a last resort, when the
+/// provider is disposed with unsaved edits. Failures are reported through
+/// [editorSaveStatusProvider], never swallowed.
+class ResumeEditorNotifier extends AsyncNotifier<Resume> {
+  ResumeEditorNotifier(this.resumeId);
+
+  final String resumeId;
+
+  static const saveDebounce = Duration(milliseconds: 1500);
+
   Timer? _debounceTimer;
 
-  ResumeEditorNotifier(this._ref, this._resumeId)
-    : super(const AsyncValue.loading()) {
-    _loadResume();
+  /// Latest local version not yet saved successfully.
+  Resume? _unsaved;
+
+  @override
+  Future<Resume> build() async {
+    final updateResume = ref.read(updateResumeUseCaseProvider);
+    ref.onDispose(() {
+      _debounceTimer?.cancel();
+      // Leaving within the debounce window must not lose the last edit.
+      final pending = _unsaved;
+      if (pending != null) unawaited(updateResume(resume: pending));
+    });
+
+    final getResume = ref.read(getResumeByIdUseCaseProvider);
+    final result = await getResume(resumeId: resumeId);
+    return result.fold((failure) => throw failure, (resume) => resume);
   }
 
-  Future<void> _loadResume() async {
-    state = const AsyncValue.loading();
-    try {
-      final getResume = _ref.read(getResumeByIdUseCaseProvider);
-      final result = await getResume(resumeId: _resumeId);
-      result.fold(
-        (failure) => state = AsyncValue.error(failure, StackTrace.current),
-        (resume) => state = AsyncValue.data(resume),
-      );
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+  void _setStatus(SaveStatus status) {
+    if (!ref.mounted) return;
+    ref.read(editorSaveStatusProvider(resumeId).notifier).set(status);
   }
 
   void updateResumeLocally(Resume updatedResume) {
     state = AsyncValue.data(updatedResume);
+    _unsaved = updatedResume;
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(
-      const Duration(milliseconds: 500),
-      () => saveToCloud(),
-    );
+    _debounceTimer = Timer(saveDebounce, () => saveToCloud());
+  }
+
+  /// Saves right away if there are unsaved edits. Returns false if a save
+  /// was needed and failed.
+  Future<bool> flush() async {
+    if (_unsaved == null) return true;
+    return saveToCloud();
   }
 
   /// Saves the current resume. Returns false when the save failed.
   Future<bool> saveToCloud() async {
+    _debounceTimer?.cancel();
     final currentResume = state.value;
     if (currentResume == null) return false;
+
+    _setStatus(SaveStatus.saving);
     try {
-      final updateResume = _ref.read(updateResumeUseCaseProvider);
+      final updateResume = ref.read(updateResumeUseCaseProvider);
       final result = await updateResume(resume: currentResume);
-      return result.isRight();
+      final saved = result.isRight();
+      // Edits made while saving stay unsaved and get their own save.
+      if (saved && identical(_unsaved, currentResume)) _unsaved = null;
+      _setStatus(saved ? SaveStatus.saved : SaveStatus.error);
+      return saved;
     } catch (e) {
+      _setStatus(SaveStatus.error);
       return false;
     }
   }
 
   Future<String?> aiImproveText(String originalText) async {
     try {
-      final improveSection = _ref.read(improveResumeSectionUseCaseProvider);
+      final improveSection = ref.read(improveResumeSectionUseCaseProvider);
       final result = await improveSection(text: originalText);
       return result.fold((failure) => null, (r) => r);
     } catch (e) {
@@ -72,12 +116,12 @@ class ResumeEditorNotifier extends StateNotifier<AsyncValue<Resume>> {
   Future<String?> exportPdf() async {
     final currentResume = state.value;
     if (currentResume == null) return 'The resume has not loaded yet.';
-    final authUser = _ref.read(authStateProvider).value;
+    final authUser = ref.read(authStateProvider).value;
     if (authUser == null) return 'Please sign in again to export.';
     try {
       // The auth snapshot has no contact fields; use the full profile so
       // phone, location and links reach the PDF.
-      final getProfile = _ref.read(getUserProfileUseCaseProvider);
+      final getProfile = ref.read(getUserProfileUseCaseProvider);
       final profileResult = await getProfile(userId: authUser.id);
       final user = profileResult.fold((_) => authUser, (profile) => profile);
 
@@ -116,16 +160,8 @@ class ResumeEditorNotifier extends StateNotifier<AsyncValue<Resume>> {
     updateResumeLocally(currentResume.copyWith(templateId: templateId));
   }
 
-  void retry() => _loadResume();
-
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    super.dispose();
-  }
+  void retry() => ref.invalidateSelf();
 }
 
-final resumeEditorProvider = StateNotifierProvider.autoDispose
-    .family<ResumeEditorNotifier, AsyncValue<Resume>, String>(
-      (ref, resumeId) => ResumeEditorNotifier(ref, resumeId),
-    );
+final resumeEditorProvider = AsyncNotifierProvider.autoDispose
+    .family<ResumeEditorNotifier, Resume, String>(ResumeEditorNotifier.new);

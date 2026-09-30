@@ -113,6 +113,10 @@ class SupabaseDatabaseService {
   /// Shortcut to query a table by name.
   SupabaseQueryBuilder from(String table) => client.from(table);
 
+  /// Calls a Postgres function (for example save_resume).
+  Future<dynamic> rpc(String function, {Map<String, dynamic>? params}) =>
+      client.rpc(function, params: params);
+
   /// Shortcut to invoke an Edge Function.
   FunctionsClient get functions => client.functions;
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../../core/utils/validators.dart';
 import '../../../../../domain/entities/work_experience.dart';
@@ -53,7 +54,9 @@ class _WorkExperienceFormState extends State<WorkExperienceForm> {
   void _save() {
     if (_formKey.currentState!.validate()) {
       final updated = WorkExperience(
-        id: widget.initialData?.id ?? DateTime.now().toIso8601String(),
+        // Child ids are uuids in the database; a timestamp string failed
+        // every later save of the resume.
+        id: widget.initialData?.id ?? const Uuid().v4(),
         resumeId: widget.initialData?.resumeId ?? '',
         company: _companyCtrl.text,
         role: _roleCtrl.text,

@@ -70,109 +70,9 @@ class SupabaseResumeRepository implements IResumeRepository {
   @override
   Future<Either<Failure, Resume>> createResume(Resume resume) async {
     try {
-      final data = await _db
-          .from('resumes')
-          .insert({
-            'id': resume.id,
-            'user_id': resume.userId,
-            'title': resume.title,
-            'template_id': resume.templateId,
-            'summary': resume.summary,
-            'ats_score': resume.atsScore,
-            'is_published': resume.isPublished,
-          })
-          .select()
-          .single();
-
-      final savedResumeId = data['id'] as String;
-
-      // Stamp the real, DB-assigned resume ID onto every child entity
-      // before inserting them — the incoming `resume` may have children
-      // with a placeholder/empty resumeId (e.g. freshly AI-generated).
-      final resumeWithRealId = Resume(
-        id: savedResumeId,
-        userId: resume.userId,
-        title: resume.title,
-        templateId: resume.templateId,
-        summary: resume.summary,
-        atsScore: resume.atsScore,
-        isPublished: resume.isPublished,
-        createdAt: resume.createdAt,
-        updatedAt: resume.updatedAt,
-        workExperiences: resume.workExperiences
-            .map(
-              (w) => WorkExperience(
-                id: w.id,
-                resumeId: savedResumeId,
-                company: w.company,
-                role: w.role,
-                startDate: w.startDate,
-                endDate: w.endDate,
-                isCurrent: w.isCurrent,
-                description: w.description,
-                orderIndex: w.orderIndex,
-              ),
-            )
-            .toList(),
-        educations: resume.educations
-            .map(
-              (e) => Education(
-                id: e.id,
-                resumeId: savedResumeId,
-                institution: e.institution,
-                degree: e.degree,
-                field: e.field,
-                startDate: e.startDate,
-                endDate: e.endDate,
-                gpa: e.gpa,
-                orderIndex: e.orderIndex,
-              ),
-            )
-            .toList(),
-        skills: resume.skills
-            .map(
-              (s) => Skill(
-                id: s.id,
-                resumeId: savedResumeId,
-                name: s.name,
-                level: s.level,
-                category: s.category,
-                orderIndex: s.orderIndex,
-              ),
-            )
-            .toList(),
-        projects: resume.projects
-            .map(
-              (p) => Project(
-                id: p.id,
-                resumeId: savedResumeId,
-                name: p.name,
-                description: p.description,
-                techStack: p.techStack,
-                url: p.url,
-                orderIndex: p.orderIndex,
-              ),
-            )
-            .toList(),
-        honors: resume.honors
-            .map(
-              (h) => Honor(
-                id: h.id,
-                resumeId: savedResumeId,
-                title: h.title,
-                description: h.description,
-                certificateUrl: h.certificateUrl,
-                orderIndex: h.orderIndex,
-              ),
-            )
-            .toList(),
-      );
-
-      // Insert child records now that they carry the correct resumeId.
-      await _upsertChildren(resumeWithRealId);
-
-      // Re-fetch to get complete aggregate
-      return getResumeById(savedResumeId);
+      final id = await _saveResume(resume);
+      // One read to return exactly what was stored (server timestamps).
+      return getResumeById(id);
     } catch (e) {
       return Left(ServerFailure('Failed to create resume: $e'));
     }
@@ -181,23 +81,8 @@ class SupabaseResumeRepository implements IResumeRepository {
   @override
   Future<Either<Failure, Resume>> updateResume(Resume resume) async {
     try {
-      await _db
-          .from('resumes')
-          .update({
-            'title': resume.title,
-            'template_id': resume.templateId,
-            'summary': resume.summary,
-            'ats_score': resume.atsScore,
-            'is_published': resume.isPublished,
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
-          })
-          .eq('id', resume.id);
-
-      // Replace children: delete then re-insert
-      await _deleteChildren(resume.id);
-      await _upsertChildren(resume);
-
-      return getResumeById(resume.id);
+      await _saveResume(resume);
+      return Right(resume.copyWith(updatedAt: DateTime.now()));
     } catch (e) {
       return Left(ServerFailure('Failed to update resume: $e'));
     }
@@ -300,119 +185,82 @@ class SupabaseResumeRepository implements IResumeRepository {
     orderIndex: m['order_index'] as int? ?? 0,
   );
 
-  // ── Child table operations ────────────────────────────────────────
+  // ── Saving ────────────────────────────────────────────────────────
 
-  Future<void> _upsertChildren(Resume resume) async {
-    if (resume.workExperiences.isNotEmpty) {
-      await _db
-          .from('work_experiences')
-          .insert(
-            resume.workExperiences
-                .map(
-                  (w) => {
-                    'id': w.id,
-                    'resume_id': w.resumeId,
-                    'company': w.company,
-                    'role': w.role,
-                    'start_date': w.startDate.toIso8601String(),
-                    'end_date': w.endDate?.toIso8601String(),
-                    'is_current': w.isCurrent,
-                    'description': w.description,
-                    'order_index': w.orderIndex,
-                  },
-                )
-                .toList(),
-          );
-    }
-
-    if (resume.educations.isNotEmpty) {
-      await _db
-          .from('educations')
-          .insert(
-            resume.educations
-                .map(
-                  (e) => {
-                    'id': e.id,
-                    'resume_id': e.resumeId,
-                    'institution': e.institution,
-                    'degree': e.degree,
-                    'field': e.field,
-                    'start_date': e.startDate.toIso8601String(),
-                    'end_date': e.endDate?.toIso8601String(),
-                    'gpa': e.gpa,
-                    'order_index': e.orderIndex,
-                  },
-                )
-                .toList(),
-          );
-    }
-
-    if (resume.skills.isNotEmpty) {
-      await _db
-          .from('skills')
-          .insert(
-            resume.skills
-                .map(
-                  (s) => {
-                    'id': s.id,
-                    'resume_id': s.resumeId,
-                    'name': s.name,
-                    'level': s.level,
-                    'category': s.category,
-                    'order_index': s.orderIndex,
-                  },
-                )
-                .toList(),
-          );
-    }
-
-    if (resume.projects.isNotEmpty) {
-      await _db
-          .from('projects')
-          .insert(
-            resume.projects
-                .map(
-                  (p) => {
-                    'id': p.id,
-                    'resume_id': p.resumeId,
-                    'name': p.name,
-                    'description': p.description,
-                    'tech_stack': p.techStack,
-                    'url': p.url,
-                    'order_index': p.orderIndex,
-                  },
-                )
-                .toList(),
-          );
-    }
-
-    if (resume.honors.isNotEmpty) {
-      await _db
-          .from('honors')
-          .insert(
-            resume.honors
-                .map(
-                  (h) => {
-                    'id': h.id,
-                    'resume_id': h.resumeId,
-                    'title': h.title,
-                    'description': h.description,
-                    'certificate_url': h.certificateUrl,
-                    'order_index': h.orderIndex,
-                  },
-                )
-                .toList(),
-          );
-    }
+  /// Saves the resume and all child sections in one transaction via the
+  /// save_resume database function (see supabase/migrations). Returns the id.
+  Future<String> _saveResume(Resume resume) async {
+    final id = await _db.rpc(
+      'save_resume',
+      params: {'p_resume': toSavePayload(resume)},
+    );
+    return id as String;
   }
 
-  Future<void> _deleteChildren(String resumeId) async {
-    await Future.wait([
-      _db.from('work_experiences').delete().eq('resume_id', resumeId),
-      _db.from('educations').delete().eq('resume_id', resumeId),
-      _db.from('skills').delete().eq('resume_id', resumeId),
-      _db.from('projects').delete().eq('resume_id', resumeId),
-      _db.from('honors').delete().eq('resume_id', resumeId),
-    ]);
-  }
+  /// The save_resume payload: column names as keys, one list per section.
+  static Map<String, dynamic> toSavePayload(Resume resume) => {
+    'id': resume.id,
+    'title': resume.title,
+    'template_id': resume.templateId,
+    'summary': resume.summary,
+    'ats_score': resume.atsScore,
+    'is_published': resume.isPublished,
+    'work_experiences': [
+      for (final w in resume.workExperiences)
+        {
+          'id': w.id,
+          'company': w.company,
+          'role': w.role,
+          'start_date': w.startDate.toIso8601String(),
+          'end_date': w.endDate?.toIso8601String(),
+          'is_current': w.isCurrent,
+          'description': w.description,
+          'order_index': w.orderIndex,
+        },
+    ],
+    'educations': [
+      for (final e in resume.educations)
+        {
+          'id': e.id,
+          'institution': e.institution,
+          'degree': e.degree,
+          'field': e.field,
+          'start_date': e.startDate.toIso8601String(),
+          'end_date': e.endDate?.toIso8601String(),
+          'gpa': e.gpa,
+          'order_index': e.orderIndex,
+        },
+    ],
+    'skills': [
+      for (final sk in resume.skills)
+        {
+          'id': sk.id,
+          'name': sk.name,
+          'level': sk.level,
+          'category': sk.category,
+          'order_index': sk.orderIndex,
+        },
+    ],
+    'projects': [
+      for (final p in resume.projects)
+        {
+          'id': p.id,
+          'name': p.name,
+          'description': p.description,
+          'tech_stack': p.techStack,
+          'url': p.url,
+          'order_index': p.orderIndex,
+        },
+    ],
+    'honors': [
+      for (final h in resume.honors)
+        {
+          'id': h.id,
+          'title': h.title,
+          'description': h.description,
+          'certificate_url': h.certificateUrl,
+          'order_index': h.orderIndex,
+        },
+    ],
+  };
 }

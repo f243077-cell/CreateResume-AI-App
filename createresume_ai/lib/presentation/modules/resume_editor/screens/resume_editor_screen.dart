@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../application/providers/resume_list_provider.dart';
 import '../../../../core/constants/template_ids.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/education.dart';
@@ -30,8 +30,51 @@ class ResumeEditorScreen extends ConsumerStatefulWidget {
   ConsumerState<ResumeEditorScreen> createState() => _ResumeEditorScreenState();
 }
 
-class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
+class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen>
+    with WidgetsBindingObserver {
   bool _hasAppliedInitialTemplate = false;
+  bool _leaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Save before the app may be killed in the background.
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      ref.read(resumeEditorProvider(widget.resumeId).notifier).flush();
+    }
+  }
+
+  /// Saves pending edits, refreshes the resume lists, then closes.
+  Future<void> _leave() async {
+    if (_leaving) return;
+    _leaving = true;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final saved =
+        await ref.read(resumeEditorProvider(widget.resumeId).notifier).flush();
+    ref.invalidate(resumeListProvider);
+    if (!saved) {
+      messenger?.showSnackBar(
+        const SnackBar(
+          content: Text('Your last changes could not be saved.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+    if (mounted) Navigator.of(context).pop();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +100,13 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
       });
     });
 
-    return Scaffold(
+    // System back also saves before leaving.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leave();
+      },
+      child: Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         leading: Semantics(
@@ -65,11 +114,7 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
           label: 'Close editor',
           child: IconButton(
             icon: const Icon(Icons.close_rounded),
-            onPressed: () {
-              // Save on exit
-              ref.read(resumeEditorProvider(widget.resumeId).notifier).saveToCloud();
-              context.pop();
-            },
+            onPressed: _leave,
           ),
         ),
         title: const Text(
@@ -77,6 +122,7 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          _SaveStatusIndicator(resumeId: widget.resumeId),
           // Template selector
           Semantics(
             button: true,
@@ -532,6 +578,7 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -730,5 +777,45 @@ class _ResumeEditorScreenState extends ConsumerState<ResumeEditorScreen> {
       default:
         return Icons.description_rounded;
     }
+  }
+}
+
+/// Small autosave indicator: spinner while saving, cloud when saved, and a
+/// retry button when the last save failed.
+class _SaveStatusIndicator extends ConsumerWidget {
+  final String resumeId;
+
+  const _SaveStatusIndicator({required this.resumeId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(editorSaveStatusProvider(resumeId));
+    return switch (status) {
+      SaveStatus.idle => const SizedBox.shrink(),
+      SaveStatus.saving => Semantics(
+          label: 'Saving',
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+      SaveStatus.saved => const Tooltip(
+          message: 'Saved',
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Icon(Icons.cloud_done_rounded, size: 20, semanticLabel: 'Saved'),
+          ),
+        ),
+      SaveStatus.error => IconButton(
+          icon: const Icon(Icons.cloud_off_rounded, color: AppColors.error, size: 20),
+          tooltip: 'Not saved. Tap to retry',
+          onPressed: () =>
+              ref.read(resumeEditorProvider(resumeId).notifier).saveToCloud(),
+        ),
+    };
   }
 }
