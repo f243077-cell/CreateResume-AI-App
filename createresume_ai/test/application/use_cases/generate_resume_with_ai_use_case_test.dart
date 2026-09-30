@@ -4,14 +4,14 @@ import 'package:createresume_app/domain/entities/resume.dart';
 import 'package:createresume_app/domain/entities/user.dart';
 import 'package:createresume_app/domain/repositories/i_resume_repository.dart';
 import 'package:createresume_app/domain/repositories/i_user_profile_repository.dart';
-import 'package:createresume_app/infrastructure/services/ai_service.dart';
+import 'package:createresume_app/domain/services/i_ai_content_generator.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-class MockAIService extends Mock implements AiService {}
+class MockAIService extends Mock implements IAIContentGenerator {}
 
 class MockResumeRepository extends Mock implements IResumeRepository {}
 
@@ -100,7 +100,6 @@ void main() {
               description: any(named: 'description'),
               careerStage: any(named: 'careerStage'),
               jobTitle: any(named: 'jobTitle'),
-              userId: any(named: 'userId'),
               jobDescription: any(named: 'jobDescription'),
               industry: any(named: 'industry'),
             ));
@@ -119,7 +118,6 @@ void main() {
               description: any(named: 'description'),
               careerStage: any(named: 'careerStage'),
               jobTitle: any(named: 'jobTitle'),
-              userId: any(named: 'userId'),
               jobDescription: any(named: 'jobDescription'),
               industry: any(named: 'industry'),
             )).thenAnswer((_) async => Right(aiData));
@@ -165,7 +163,6 @@ void main() {
               description: any(named: 'description'),
               careerStage: any(named: 'careerStage'),
               jobTitle: any(named: 'jobTitle'),
-              userId: any(named: 'userId'),
               jobDescription: any(named: 'jobDescription'),
               industry: any(named: 'industry'),
             ));
@@ -189,7 +186,6 @@ void main() {
               description: testDescription,
               careerStage: testCareerStage,
               jobTitle: testJobTitle,
-              userId: testUserId,
               jobDescription: 'We need Kotlin',
               industry: 'Fintech',
             )).called(1);
@@ -222,7 +218,6 @@ void main() {
               description: testDescription,
               careerStage: testCareerStage,
               jobTitle: testJobTitle,
-              userId: testUserId,
             )).thenAnswer((_) async => Right(aiData));
 
         when(() => mockResumeRepository.createResume(any()))
@@ -268,7 +263,6 @@ void main() {
               description: any(named: 'description'),
               careerStage: any(named: 'careerStage'),
               jobTitle: any(named: 'jobTitle'),
-              userId: any(named: 'userId'),
             ));
       },
     );
@@ -285,7 +279,6 @@ void main() {
               description: testDescription,
               careerStage: testCareerStage,
               jobTitle: testJobTitle,
-              userId: testUserId,
             )).thenAnswer(
                 (_) async => const Left(ServerFailure('AI service down')));
 
@@ -315,7 +308,6 @@ void main() {
             description: testDescription,
             careerStage: testCareerStage,
             jobTitle: testJobTitle,
-            userId: testUserId,
           )).thenAnswer((_) async => Right(aiData));
       when(() => mockResumeRepository.createResume(any()))
           .thenAnswer((inv) async => Right(inv.positionalArguments.first as Resume));

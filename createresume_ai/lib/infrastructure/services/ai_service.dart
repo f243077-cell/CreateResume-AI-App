@@ -42,11 +42,11 @@ class AiService implements IAIContentGenerator {
 
   /// Generate a complete resume from a user description via AI.
   /// Calls the 'dynamic-api' Edge Function.
+  @override
   Future<Either<Failure, Map<String, dynamic>>> generateResumeFromDescription({
     required String description,
     required String careerStage,
     required String jobTitle,
-    required String userId,
     String? jobDescription,
     String? industry,
   }) async {
@@ -88,12 +88,6 @@ class AiService implements IAIContentGenerator {
       // letting them crash silently or surface as an unhandled exception.
       return Left(ServerFailure('Failed to generate resume: $e'));
     }
-  }
-
-  /// Rewrite a bullet point for better impact.
-  /// Alias for rewriteBullet to match the requested method name.
-  Future<Either<Failure, String>> rewriteBulletPoint(String bulletPoint) async {
-    return rewriteBullet(bulletPoint);
   }
 
   @override

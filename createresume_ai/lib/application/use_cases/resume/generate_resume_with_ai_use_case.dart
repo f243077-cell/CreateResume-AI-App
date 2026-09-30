@@ -12,7 +12,7 @@ import '../../../domain/entities/skill.dart';
 import '../../../domain/entities/work_experience.dart';
 import '../../../domain/repositories/i_resume_repository.dart';
 import '../../../domain/repositories/i_user_profile_repository.dart';
-import '../../../infrastructure/services/ai_service.dart';
+import '../../../domain/services/i_ai_content_generator.dart';
 
 /// Returned when the AI produced a resume but saving it failed.
 ///
@@ -35,7 +35,7 @@ class GeneratedResumeNotSavedFailure extends Failure {
 /// 1. Fetch the user's profile; with fewer than [creditCost] credits return
 ///    [InsufficientCreditsFailure] without calling the AI (the server
 ///    enforces this too and answers 402).
-/// 2. Call AiService.generateResumeFromDescription(). The dynamic-api
+/// 2. Call generateResumeFromDescription(). The dynamic-api
 ///    function charges [creditCost] before the model and refunds on failure.
 /// 3. Map the JSON response to Resume domain entity with sub-entities.
 /// 4. Save the Resume via [saveGenerated]; a failed save returns
@@ -45,7 +45,7 @@ class GeneratedResumeNotSavedFailure extends Failure {
 class GenerateResumeWithAIUseCase {
   static const creditCost = 2;
 
-  final AiService _aiService;
+  final IAIContentGenerator _aiService;
   final IResumeRepository _resumeRepository;
   final IUserProfileRepository _userProfileRepository;
   final Uuid _uuid;
@@ -82,7 +82,6 @@ class GenerateResumeWithAIUseCase {
         description: description,
         careerStage: careerStage,
         jobTitle: jobTitle,
-        userId: userId,
         jobDescription: jobDescription,
         industry: industry,
       );

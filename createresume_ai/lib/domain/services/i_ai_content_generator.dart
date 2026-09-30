@@ -4,6 +4,16 @@ import '../../core/errors/failures.dart';
 
 /// AI-powered content generation service contract.
 abstract class IAIContentGenerator {
+  /// Generates a complete resume (as the AI's JSON map) from the user's
+  /// description. The server identifies the user from their session.
+  Future<Either<Failure, Map<String, dynamic>>> generateResumeFromDescription({
+    required String description,
+    required String careerStage,
+    required String jobTitle,
+    String? jobDescription,
+    String? industry,
+  });
+
   /// Improves the wording and impact of a resume section.
   Future<Either<Failure, String>> improveSection(String text);
 

@@ -93,7 +93,7 @@ void main() {
     test('402 becomes InsufficientCreditsFailure and is not retried', () async {
       failWith(402, {'error': 'insufficient_credits', 'required': 2, 'available': 1});
       final result = await service.generateResumeFromDescription(
-        description: 'd', careerStage: 's', jobTitle: 't', userId: 'u1');
+        description: 'd', careerStage: 's', jobTitle: 't');
       expect(
         result.fold((f) => f, (_) => null),
         const InsufficientCreditsFailure(requested: 2, available: 1),
@@ -122,7 +122,7 @@ void main() {
     test('each user action gets a new key; userId is not sent', () async {
       answerWith({'success': true, 'resume': {'summary': 's'}});
       await service.generateResumeFromDescription(
-        description: 'd', careerStage: 's', jobTitle: 't', userId: 'u1');
+        description: 'd', careerStage: 's', jobTitle: 't');
       await service.rewriteBullet('x');
       final captured = verify(
         () => functions.invoke(any(), body: captureAny(named: 'body'), headers: captureAny(named: 'headers')),

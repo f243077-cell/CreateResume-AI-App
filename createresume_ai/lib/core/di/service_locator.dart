@@ -171,7 +171,7 @@ final createApplicationUseCaseProvider = Provider<CreateApplicationUseCase>(
 final generateResumeWithAIUseCaseProvider =
     Provider<GenerateResumeWithAIUseCase>(
   (ref) => GenerateResumeWithAIUseCase(
-    aiService: ref.watch(aiContentGeneratorProvider) as AiService,
+    aiService: ref.watch(aiContentGeneratorProvider),
     resumeRepository: ref.watch(resumeRepositoryProvider),
     userProfileRepository: ref.watch(userProfileRepositoryProvider),
   ),
