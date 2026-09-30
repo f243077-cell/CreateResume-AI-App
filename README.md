@@ -79,7 +79,10 @@ supabase/
 4. **Deploy the Edge Function**
    ```bash
    supabase functions deploy dynamic-api
+   supabase functions deploy ai-tools
    supabase secrets set OPENROUTER_API_KEY=your_openrouter_key_here
+   # Optional: override the free model list without a code change
+   supabase secrets set AI_MODELS=modelA,modelB,modelC
    ```
 
 5. **Run the app**
@@ -93,7 +96,7 @@ This project keeps sensitive configuration out of version control:
 
 - Supabase credentials should be set via your platform's secure config (not committed).
 - `OPENROUTER_API_KEY` is stored as a Supabase Edge Function secret, never in client code.
-- The `supabase/` directory (including function source and local config) is excluded from Git — see `.gitignore`.
+- Edge Function source lives in `createresume_ai/supabase/functions/` and is versioned; only local CLI state (`supabase/.temp/`) is ignored.
 
 ## Architecture Notes
 
