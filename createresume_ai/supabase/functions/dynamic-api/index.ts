@@ -121,6 +121,9 @@ Deno.serve(async (req) => {
             temperature: 0.7,
             json: true,
             models,
+            // A resume legitimately repeats phrases across bullets; the
+            // schema check (and one repair call) judges the answer instead.
+            accept: () => true,
           }),
           [
             { role: 'system', content: systemPrompt },

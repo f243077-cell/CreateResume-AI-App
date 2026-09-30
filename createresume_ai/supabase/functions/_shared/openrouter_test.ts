@@ -1,6 +1,6 @@
 // deno test --allow-env supabase/functions/_shared/openrouter_test.ts
 import { assertEquals, assertThrows } from 'jsr:@std/assert@1'
-import { cleanText, DEFAULT_MODELS, extractJson, modelList } from './openrouter.ts'
+import { cleanText, DEFAULT_MODELS, extractJson, looksDegenerate, modelList } from './openrouter.ts'
 
 Deno.test('extractJson ignores wrapper text and code fences', () => {
   assertEquals(extractJson('```json\n{"a": {"b": 1}}\n```'), { a: { b: 1 } })
@@ -33,4 +33,14 @@ Deno.test('premium users get AI_MODELS_PREMIUM when set', () => {
   assertEquals(modelList(true), ['paid/model'])
   assertEquals(modelList(false), DEFAULT_MODELS)
   Deno.env.delete('AI_MODELS_PREMIUM')
+})
+
+Deno.test('looksDegenerate catches a model repeating itself', () => {
+  assertEquals(
+    looksDegenerate('Fixed bugs in the Flutter app, fixed bugs in the Flutter app, fixed bugs in the Flutter app'),
+    true,
+  )
+  assertEquals(looksDegenerate('Resolved bugs in the Flutter app while collaborating with the backend team.'), false)
+  // Short list items may repeat a word without being degenerate.
+  assertEquals(looksDegenerate('Matching skills\n- Flutter\n- Dart\nMissing skills\n- Kotlin\n- Riverpod'), false)
 })

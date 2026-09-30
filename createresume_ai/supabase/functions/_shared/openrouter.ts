@@ -2,11 +2,33 @@
 
 // Free model IDs change often, so the list can be replaced without a code
 // change: `supabase secrets set AI_MODELS=modelA,modelB,modelC`.
+// Free models are often rate-limited upstream (429), so try several. A live
+// test hit 429 on all three of an earlier, shorter list at once.
 export const DEFAULT_MODELS = [
   'google/gemma-4-31b-it:free',
   'nvidia/nemotron-3-super-120b-a12b:free',
+  'google/gemma-4-26b-a4b-it:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
   'qwen/qwen3.8-27b:free',
+  'dots-studio/dots-3-note-preview:free',
 ]
+
+/**
+ * True when a model answer is stuck repeating itself (the same clause of
+ * three or more words appearing three or more times), which some free
+ * models do. Such answers are rejected so the next model is tried.
+ */
+export function looksDegenerate(text: string): boolean {
+  const counts = new Map<string, number>()
+  for (const part of text.toLowerCase().split(/[,.;:\n]+/)) {
+    const clause = part.replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
+    if (clause.split(' ').length < 3) continue
+    const n = (counts.get(clause) ?? 0) + 1
+    if (n >= 3) return true
+    counts.set(clause, n)
+  }
+  return false
+}
 
 function envList(name: string): string[] {
   return (Deno.env.get(name) ?? '')
@@ -40,6 +62,8 @@ export async function callModels(
     /** Ask for a JSON object (ignored by models that do not support it). */
     json?: boolean
     models?: string[]
+    /** Rejects an answer so the next model is tried (default: not degenerate). */
+    accept?: (content: string) => boolean
   },
 ): Promise<{ content: string; model: string }> {
   let lastError = ''
@@ -73,8 +97,14 @@ export async function callModels(
       const data = await response.json()
       const content = data.choices?.[0]?.message?.content
       if (typeof content === 'string' && content.trim()) {
-        console.info(`Answered by model: ${model}`)
-        return { content, model }
+        const accept = opts.accept ?? ((c: string) => !looksDegenerate(c))
+        if (accept(content)) {
+          console.info(`Answered by model: ${model}`)
+          return { content, model }
+        }
+        lastError = `rejected answer from ${model}`
+        console.warn(`Model "${model}" gave an unusable answer; trying the next one`)
+        continue
       }
       lastError = 'empty response'
     } catch (err) {
