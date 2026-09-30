@@ -146,10 +146,9 @@ void main() {
           (failure as GeneratedResumeNotSavedFailure).resume.title,
           testJobTitle,
         );
-        verifyNever(() => mockUserProfileRepository.deductCredits(
-              userId: any(named: 'userId'),
-              amount: any(named: 'amount'),
-            ));
+        // Credits are charged by the server; the client only reads the profile.
+        verify(() => mockUserProfileRepository.getProfile(testUserId)).called(1);
+        verifyNoMoreInteractions(mockUserProfileRepository);
       });
 
       test('saveGenerated retries the save without calling the AI again',
@@ -157,10 +156,6 @@ void main() {
         final saved = makeResume();
         when(() => mockResumeRepository.createResume(any()))
             .thenAnswer((_) async => Right(saved));
-        when(() => mockUserProfileRepository.deductCredits(
-              userId: testUserId,
-              amount: 2,
-            )).thenAnswer((_) async => Right(user));
 
         final result =
             await useCase.saveGenerated(resume: saved, userId: testUserId);
@@ -176,31 +171,9 @@ void main() {
             ));
       });
 
-      test('failed deduction removes the saved resume and returns the failure',
-          () async {
-        final saved = makeResume();
-        when(() => mockResumeRepository.createResume(any()))
-            .thenAnswer((_) async => Right(saved));
-        when(() => mockUserProfileRepository.deductCredits(
-              userId: testUserId,
-              amount: 2,
-            )).thenAnswer((_) async => const Left(ServerFailure('charge failed')));
-        when(() => mockResumeRepository.deleteResume(saved.id))
-            .thenAnswer((_) async => const Right(null));
-
-        final result = await run();
-
-        expect(result, const Left<Failure, Resume>(ServerFailure('charge failed')));
-        verify(() => mockResumeRepository.deleteResume(saved.id)).called(1);
-      });
-
       test('passes the job posting and industry to the AI', () async {
         when(() => mockResumeRepository.createResume(any()))
             .thenAnswer((_) async => Right(makeResume()));
-        when(() => mockUserProfileRepository.deductCredits(
-              userId: testUserId,
-              amount: 2,
-            )).thenAnswer((_) async => Right(user));
 
         await useCase.call(
           userId: testUserId,
@@ -224,7 +197,7 @@ void main() {
     });
 
     test(
-      'deducts 2 credits and returns resume on success',
+      'returns the saved resume on success without writing credits',
       () async {
         // Arrange — user has credits
         final user = makeUser(creditBalance: 5);
@@ -255,12 +228,6 @@ void main() {
         when(() => mockResumeRepository.createResume(any()))
             .thenAnswer((_) async => Right(savedResume));
 
-        when(() => mockUserProfileRepository.deductCredits(
-              userId: testUserId,
-              amount: 2,
-            )).thenAnswer(
-            (_) async => Right(user.copyWith(creditBalance: 3)));
-
         // Act
         final result = await useCase.call(
           userId: testUserId,
@@ -272,10 +239,9 @@ void main() {
 
         // Assert
         expect(result, equals(Right(savedResume)));
-        verify(() => mockUserProfileRepository.deductCredits(
-              userId: testUserId,
-              amount: 2,
-            )).called(1);
+        // Credits are charged by the server; the client only reads the profile.
+        verify(() => mockUserProfileRepository.getProfile(testUserId)).called(1);
+        verifyNoMoreInteractions(mockUserProfileRepository);
       },
     );
 
@@ -308,7 +274,7 @@ void main() {
     );
 
     test(
-      'returns failure when AI generation fails — does not deduct credits',
+      'returns failure when AI generation fails and saves nothing',
       () async {
         // Arrange
         when(() => mockUserProfileRepository.getProfile(testUserId))
@@ -334,10 +300,7 @@ void main() {
 
         // Assert
         expect(result, isA<Left>());
-        verifyNever(() => mockUserProfileRepository.deductCredits(
-              userId: any(named: 'userId'),
-              amount: any(named: 'amount'),
-            ));
+        verifyNever(() => mockResumeRepository.createResume(any()));
       },
     );
   });
@@ -356,10 +319,6 @@ void main() {
           )).thenAnswer((_) async => Right(aiData));
       when(() => mockResumeRepository.createResume(any()))
           .thenAnswer((inv) async => Right(inv.positionalArguments.first as Resume));
-      when(() => mockUserProfileRepository.deductCredits(
-            userId: testUserId,
-            amount: 2,
-          )).thenAnswer((_) async => Right(user));
 
       final result = await useCase.call(
         userId: testUserId,

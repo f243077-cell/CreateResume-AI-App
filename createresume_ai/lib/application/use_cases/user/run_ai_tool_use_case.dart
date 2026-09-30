@@ -35,8 +35,9 @@ final class CoverLetterRequest extends AiToolRequest {
   });
 }
 
-/// Runs an AI tool and charges [creditCost] credit only after the AI
-/// returned a result, so a failed call costs nothing.
+/// Runs an AI tool. The ai-tools function charges [creditCost] credit before
+/// the model and refunds it if the call fails; the returned profile carries
+/// the new balance.
 class RunAiToolUseCase {
   static const creditCost = 1;
 
@@ -64,17 +65,13 @@ class RunAiToolUseCase {
         final aiResult = await _generate(request);
 
         return aiResult.fold(Left.new, (resultText) async {
-          final deductResult = await _userProfileRepository.deductCredits(
-            userId: userId,
-            amount: creditCost,
+          // Re-read the balance the server just charged.
+          final refreshed = await _userProfileRepository.getProfile(userId);
+          final profile = refreshed.fold(
+            (_) => user.copyWith(creditBalance: user.creditBalance - creditCost),
+            (p) => p,
           );
-          return deductResult.fold(
-            Left.new,
-            (updatedProfile) => Right((
-              profile: updatedProfile,
-              resultText: resultText,
-            )),
-          );
+          return Right((profile: profile, resultText: resultText));
         });
       },
     );

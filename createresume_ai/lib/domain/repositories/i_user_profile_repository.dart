@@ -16,16 +16,4 @@ abstract class IUserProfileRepository {
     required String userId,
     required String filePath,
   });
-
-  /// Deducts [amount] credits from the user's balance.
-  Future<Either<Failure, User>> deductCredits({
-    required String userId,
-    required int amount,
-  });
-
-  /// Adds [amount] credits to the user's balance.
-  Future<Either<Failure, User>> addCredits({
-    required String userId,
-    required int amount,
-  });
 }

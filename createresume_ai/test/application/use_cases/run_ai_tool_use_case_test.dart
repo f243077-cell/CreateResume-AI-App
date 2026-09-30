@@ -23,23 +23,21 @@ void main() {
     ai = MockAiContentGenerator();
     useCase = RunAiToolUseCase(repo, ai);
     when(() => repo.getProfile('u1')).thenAnswer((_) async => const Right(user));
-    when(() => repo.deductCredits(userId: 'u1', amount: 1))
-        .thenAnswer((_) async => Right(user.copyWith(creditBalance: 2)));
   });
 
-  void verifyNotCharged() => verifyNever(
-        () => repo.deductCredits(userId: any(named: 'userId'), amount: any(named: 'amount')),
-      );
-
-  test('bullet rewriter returns the model output and charges 1 credit', () async {
+  test('bullet rewriter returns the model output and the server-charged balance', () async {
     when(() => ai.rewriteBullet('did stuff')).thenAnswer((_) async => const Right('Led X'));
+    var fetches = 0;
+    // First read: before the call (3). Second: after the server charged (2).
+    when(() => repo.getProfile('u1')).thenAnswer(
+      (_) async => Right(user.copyWith(creditBalance: fetches++ == 0 ? 3 : 2)),
+    );
 
     final result = await useCase(userId: 'u1', request: const BulletRewriteRequest('did stuff'));
 
     final value = result.getOrElse(() => throw StateError('Left'));
     expect(value.resultText, 'Led X');
     expect(value.profile.creditBalance, 2);
-    verify(() => repo.deductCredits(userId: 'u1', amount: 1)).called(1);
   });
 
   test('skill gap and cover letter call the matching AI methods', () async {
@@ -68,14 +66,23 @@ void main() {
     expect(letter.getOrElse(() => throw StateError('Left')).resultText, 'Dear Acme');
   });
 
-  test('no canned text: an AI failure is returned and nothing is charged', () async {
+  test('no canned text: an AI failure is returned as a failure', () async {
     when(() => ai.rewriteBullet(any()))
         .thenAnswer((_) async => const Left(ServerFailure('function not found')));
 
     final result = await useCase(userId: 'u1', request: const BulletRewriteRequest('x'));
 
     expect(result, isA<Left>());
-    verifyNotCharged();
+  });
+
+  test('server 402 (out of credits) is passed through', () async {
+    when(() => ai.rewriteBullet(any())).thenAnswer(
+      (_) async => const Left(InsufficientCreditsFailure(requested: 1, available: 0)),
+    );
+
+    final result = await useCase(userId: 'u1', request: const BulletRewriteRequest('x'));
+
+    expect(result.fold((f) => f, (_) => null), isA<InsufficientCreditsFailure>());
   });
 
   test('without credits the AI is not called', () async {
@@ -91,16 +98,5 @@ void main() {
       ),
     );
     verifyNever(() => ai.rewriteBullet(any()));
-    verifyNotCharged();
-  });
-
-  test('a failed charge withholds the result', () async {
-    when(() => ai.rewriteBullet(any())).thenAnswer((_) async => const Right('Led X'));
-    when(() => repo.deductCredits(userId: 'u1', amount: 1))
-        .thenAnswer((_) async => const Left(ServerFailure('charge failed')));
-
-    final result = await useCase(userId: 'u1', request: const BulletRewriteRequest('x'));
-
-    expect(result.isLeft(), isTrue);
   });
 }

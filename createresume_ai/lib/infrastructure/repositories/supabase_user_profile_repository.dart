@@ -36,10 +36,10 @@ class SupabaseUserProfileRepository implements IUserProfileRepository {
       final data = await _db
           .from('profiles')
           .update({
+            // credit_balance and subscription_status are not client-writable
+            // (see the server_side_credits migration).
             'full_name': user.fullName,
             'photo_url': user.photoUrl,
-            'subscription_status': user.subscriptionStatus.name,
-            'credit_balance': user.creditBalance,
             'ai_writing_style': user.aiWritingStyle,
             'theme_preference': user.themePreference,
             'phone': user.phone,
@@ -84,68 +84,6 @@ class SupabaseUserProfileRepository implements IUserProfileRepository {
       return Right(url);
     } catch (e) {
       return Left(ServerFailure('Failed to upload profile photo: $e'));
-    }
-  }
-
-  @override
-  Future<Either<Failure, User>> deductCredits({
-    required String userId,
-    required int amount,
-  }) async {
-    try {
-      final currentData = await _db
-          .from('profiles')
-          .select('credit_balance')
-          .eq('id', userId)
-          .single();
-      final currentBalance = currentData['credit_balance'] as int;
-
-      if (currentBalance < amount) {
-        return Left(
-          InsufficientCreditsFailure(
-            requested: amount,
-            available: currentBalance,
-          ),
-        );
-      }
-
-      final data = await _db
-          .from('profiles')
-          .update({'credit_balance': currentBalance - amount})
-          .eq('id', userId)
-          .select()
-          .single();
-
-      return Right(_mapToUser(data));
-    } catch (e) {
-      if (e is InsufficientCreditsFailure) return Left(e);
-      return Left(ServerFailure('Failed to deduct credits: $e'));
-    }
-  }
-
-  @override
-  Future<Either<Failure, User>> addCredits({
-    required String userId,
-    required int amount,
-  }) async {
-    try {
-      final currentData = await _db
-          .from('profiles')
-          .select('credit_balance')
-          .eq('id', userId)
-          .single();
-      final currentBalance = currentData['credit_balance'] as int;
-
-      final data = await _db
-          .from('profiles')
-          .update({'credit_balance': currentBalance + amount})
-          .eq('id', userId)
-          .select()
-          .single();
-
-      return Right(_mapToUser(data));
-    } catch (e) {
-      return Left(ServerFailure('Failed to add credits: $e'));
     }
   }
 

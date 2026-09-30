@@ -84,23 +84,8 @@ class SupabaseAuthRepository implements IAuthRepository {
         );
       }
 
-      // Upsert a profile row for the new user.
-      await _db
-          .from('profiles')
-          .upsert({
-            'id': supaUser.id,
-            'email': email,
-            'full_name': fullName,
-            'subscription_status': 'free',
-            'credit_balance': 3, // Free starter credits
-          })
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw Exception('Profile upsert timed out after 10 seconds');
-            },
-          );
-
+      // The profile row (with starter credits) is created by the
+      // on_auth_user_created database trigger.
       final profile = await _fetchProfile(supaUser.id);
       return Right(profile);
     } on supa.AuthException catch (e) {
@@ -204,33 +189,21 @@ class SupabaseAuthRepository implements IAuthRepository {
           .maybeSingle();
 
       if (response == null) {
-        // Profile doesn't exist, create a default one
+        // The database trigger creates the row on sign-up; clients may not
+        // insert profiles or set credits. Show the signed-in user with no
+        // credits rather than failing (which would look like a sign-out).
         final user = _db.auth.currentUser;
         if (user == null) {
           throw Exception('No authenticated user found');
         }
-
         final metadata = user.userMetadata ?? {};
-        final fullName =
-            metadata['full_name'] as String? ??
-            user.email?.split('@')[0] ??
-            'User';
-
-        await _db.from('profiles').upsert({
-          'id': userId,
-          'email': user.email,
-          'full_name': fullName,
-          'subscription_status': 'free',
-          'credit_balance': 3,
-        });
-
-        // Fetch again after creating
-        final data = await _db
-            .from('profiles')
-            .select()
-            .eq('id', userId)
-            .single();
-        return _mapToUser(data);
+        return User(
+          id: userId,
+          email: user.email ?? '',
+          fullName: metadata['full_name'] as String? ??
+              user.email?.split('@')[0] ??
+              'User',
+        );
       }
 
       return _mapToUser(response);
