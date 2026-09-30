@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FunctionException;
+import 'package:uuid/uuid.dart';
 
 import '../../core/errors/exceptions.dart';
 import '../../core/errors/failures.dart';
@@ -9,8 +11,11 @@ import 'supabase_database_service.dart';
 
 /// Calls Supabase Edge Functions for AI content generation.
 ///
-/// Every call uses a 30 s timeout with exponential backoff retry:
-/// attempt 1 → wait 2 s → attempt 2 → wait 4 s → attempt 3 → throw.
+/// Credits are charged by the functions, not here. Each user action sends
+/// one Idempotency-Key, reused on retries, so a retry after a timeout is
+/// answered from the server's stored result instead of being charged again.
+/// Retries: timeouts, network errors, 5xx and 409 (still in flight), with
+/// 2 s and 4 s back-off. Other 4xx responses are final.
 class AiService implements IAIContentGenerator {
   final SupabaseDatabaseService _db;
 
@@ -43,7 +48,6 @@ class AiService implements IAIContentGenerator {
           'description': description,
           'careerStage': careerStage,
           'jobTitle': jobTitle,
-          'userId': userId,
           if (jobDescription != null && jobDescription.trim().isNotEmpty)
             'jobDescription': jobDescription.trim(),
           if (industry != null && industry.trim().isNotEmpty)
@@ -66,8 +70,10 @@ class AiService implements IAIContentGenerator {
               'Failed to generate resume: unexpected response shape: ${data.keys}',
         ),
       );
+    } on InsufficientCreditsException catch (e) {
+      return Left(InsufficientCreditsFailure(requested: e.requested, available: e.available));
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(_serverFailure(e));
     } catch (e) {
       // Catches jsonDecode failures, type cast failures, etc. instead of
       // letting them crash silently or surface as an unhandled exception.
@@ -105,6 +111,15 @@ class AiService implements IAIContentGenerator {
 
   // ── Helpers ────────────────────────────────────────────────────────
 
+  /// Error body of a failed function call as a map (empty if unreadable).
+  Map<String, dynamic> _detailsMap(dynamic details) {
+    try {
+      if (details is Map<String, dynamic>) return details;
+      if (details is String) return jsonDecode(details) as Map<String, dynamic>;
+    } catch (_) {}
+    return const {};
+  }
+
   /// Runs one action of the 'ai-tools' Edge Function and returns its text.
   Future<Either<Failure, String>> _runAiTool(
     String action,
@@ -127,8 +142,10 @@ class AiService implements IAIContentGenerator {
               'Unexpected response shape from ai-tools ($action): ${data.keys}',
         ),
       );
+    } on InsufficientCreditsException catch (e) {
+      return Left(InsufficientCreditsFailure(requested: e.requested, available: e.available));
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(_serverFailure(e));
     } catch (e) {
       return Left(ServerFailure('AI request failed: $e'));
     }
@@ -148,59 +165,59 @@ class AiService implements IAIContentGenerator {
     );
   }
 
+  Failure _serverFailure(ServerException e) => e.statusCode == 401
+      ? const AuthFailure('Your session has expired. Please sign in again.')
+      : ServerFailure(e.message, e.statusCode);
+
   // ── Retry helper ──────────────────────────────────────────────────
 
-  /// Invokes a Supabase Edge Function with 30 s timeout and
-  /// exponential backoff: 2 s → retry → 4 s → retry → throw.
+  /// Invokes a Supabase Edge Function with one Idempotency-Key for all
+  /// attempts. 402 becomes [InsufficientCreditsException]; other 4xx are
+  /// thrown as [ServerException] without retrying.
   Future<dynamic> _invokeWithRetry({
     required String functionName,
     required Map<String, dynamic> body,
   }) async {
     const maxAttempts = 3;
     const backoffDelays = [Duration(seconds: 2), Duration(seconds: 4)];
+    final idempotencyKey = const Uuid().v4();
 
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      final isLastAttempt = attempt == maxAttempts - 1;
       try {
         final response = await _db.functions
-            .invoke(functionName, body: body)
+            .invoke(
+              functionName,
+              body: body,
+              headers: {'Idempotency-Key': idempotencyKey},
+            )
             .timeout(const Duration(seconds: 60));
-
-        if (response.status != 200) {
-          // Try to surface the Edge Function's own error message from the
-          // body, since a non-200 response often still carries useful JSON.
-          String detail = 'status ${response.status}';
-          final rawData = response.data;
-          try {
-            final map = rawData is String
-                ? jsonDecode(rawData) as Map<String, dynamic>
-                : rawData as Map<String, dynamic>;
-            if (map['error'] != null) {
-              detail = map['error'].toString();
-            }
-          } catch (_) {
-            // Body wasn't parseable JSON; fall back to the status-only detail.
-          }
-
-          throw ServerException(
-            'Edge Function "$functionName" failed: $detail',
-            response.status,
+        return response.data;
+      } on FunctionException catch (e) {
+        final details = _detailsMap(e.details);
+        if (e.status == 402) {
+          throw InsufficientCreditsException(
+            requested: (details['required'] as num?)?.toInt() ?? 0,
+            available: (details['available'] as num?)?.toInt() ?? 0,
           );
         }
-
-        return response.data;
+        final message =
+            'Edge Function "$functionName" failed: ${details['error'] ?? 'status ${e.status}'}';
+        final retryable = e.status >= 500 || e.status == 409;
+        if (!retryable || isLastAttempt) {
+          throw ServerException(message, e.status);
+        }
       } catch (e) {
-        final isLastAttempt = attempt == maxAttempts - 1;
+        if (e is ServerException || e is InsufficientCreditsException) rethrow;
         if (isLastAttempt) {
-          if (e is ServerException) rethrow;
           throw ServerException(
             'Edge Function "$functionName" failed after $maxAttempts attempts: $e',
           );
         }
-        await Future<void>.delayed(backoffDelays[attempt]);
       }
+      await Future<void>.delayed(backoffDelays[attempt]);
     }
 
-    // Unreachable, but satisfies the analyzer.
     throw const ServerException('Unexpected retry loop exit');
   }
 }
