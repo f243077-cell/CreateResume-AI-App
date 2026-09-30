@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/providers/auth_state_provider.dart';
+import '../../../../application/providers/current_profile_provider.dart';
 import '../../../../application/use_cases/user/run_ai_tool_use_case.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/errors/failures.dart';
@@ -41,20 +42,12 @@ class AiToolState {
 class AiToolNotifier extends Notifier<AiToolState> {
   @override
   AiToolState build() {
-    _loadProfile();
-    return const AiToolState();
-  }
-
-  Future<void> _loadProfile() async {
-    final user = ref.read(authStateProvider).value;
-    if (user == null) return;
-
-    final getProfile = ref.read(getUserProfileUseCaseProvider);
-    final result = await getProfile(userId: user.id);
-
-    result.fold(
-      (failure) => state = state.copyWith(error: failure.message),
-      (profile) => state = state.copyWith(profile: profile),
+    // Credits come from the shared profile (E3), so they match every screen.
+    final profile = ref.watch(currentProfileProvider);
+    return AiToolState(
+      profile: profile.value,
+      isLoading: profile.isLoading,
+      error: profile.hasError ? profile.error.toString() : null,
     );
   }
 
@@ -87,6 +80,8 @@ class AiToolNotifier extends Notifier<AiToolState> {
           profile: data.profile,
           resultText: data.resultText,
         );
+        // Share the new balance with the other screens.
+        ref.read(currentProfileProvider.notifier).setProfile(data.profile);
       },
     );
   }

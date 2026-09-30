@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../application/providers/auth_state_provider.dart';
+import '../../../../application/providers/current_profile_provider.dart';
 import '../../../../application/use_cases/resume/analyze_ats_compatibility_use_case.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../domain/entities/resume.dart';
@@ -29,6 +29,8 @@ class ResumeAnalyzerNotifier
   Future<AtsAnalysisResult> build() async {
     // Watch before the first await; re-analyze when the job description changes.
     final jobDescription = ref.watch(atsJobDescriptionProvider);
+    // Watching keeps the shared profile active while it is awaited below.
+    ref.watch(currentProfileProvider);
     return _fetchAndAnalyze(jobDescription);
   }
 
@@ -39,12 +41,8 @@ class ResumeAnalyzerNotifier
 
     final Resume resume = resumeResult.fold((l) => throw l, (r) => r);
 
-    // Contact details live on the profile; scoring still works without it.
-    final authUser = ref.read(authStateProvider).value;
-    final profile = authUser == null
-        ? null
-        : (await ref.read(getUserProfileUseCaseProvider)(userId: authUser.id))
-            .fold((_) => authUser, (p) => p);
+    // Contact details live on the shared profile; scoring works without it.
+    final profile = await ref.read(currentProfileProvider.future);
 
     final analysisResult = await analyzeAts.call(
       resume: resume,

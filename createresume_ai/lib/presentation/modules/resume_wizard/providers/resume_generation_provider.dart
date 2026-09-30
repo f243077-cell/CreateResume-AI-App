@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/providers/auth_state_provider.dart';
+import '../../../../application/providers/current_profile_provider.dart';
 import '../../../../application/providers/resume_list_provider.dart';
 import '../../../../application/use_cases/resume/generate_resume_with_ai_use_case.dart';
 import '../../../../core/constants/template_ids.dart';
@@ -112,6 +113,8 @@ class ResumeGenerationNotifier extends AsyncNotifier<Resume?> {
       (resume) {
         _unsavedResume = null;
         ref.invalidate(resumeListProvider);
+        // The server charged credits; show the new balance everywhere.
+        ref.invalidate(currentProfileProvider);
         state = AsyncValue.data(resume);
       },
     );

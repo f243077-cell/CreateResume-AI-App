@@ -4,7 +4,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:printing/printing.dart';
-import '../../../../application/providers/auth_state_provider.dart';
+import '../../../../application/providers/current_profile_provider.dart';
 import '../../../../core/constants/template_ids.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../domain/entities/resume.dart';
@@ -55,6 +55,10 @@ class ResumeEditorNotifier extends AsyncNotifier<Resume> {
       final pending = _unsaved;
       if (pending != null) unawaited(updateResume(resume: pending));
     });
+
+    // Keep the shared profile active for PDF export without rebuilding the
+    // editor (and losing unsaved edits) when the profile changes.
+    ref.listen(currentProfileProvider, (_, _) {});
 
     final getResume = ref.read(getResumeByIdUseCaseProvider);
     final result = await getResume(resumeId: resumeId);
@@ -116,14 +120,11 @@ class ResumeEditorNotifier extends AsyncNotifier<Resume> {
   Future<String?> exportPdf() async {
     final currentResume = state.value;
     if (currentResume == null) return 'The resume has not loaded yet.';
-    final authUser = ref.read(authStateProvider).value;
-    if (authUser == null) return 'Please sign in again to export.';
     try {
-      // The auth snapshot has no contact fields; use the full profile so
-      // phone, location and links reach the PDF.
-      final getProfile = ref.read(getUserProfileUseCaseProvider);
-      final profileResult = await getProfile(userId: authUser.id);
-      final user = profileResult.fold((_) => authUser, (profile) => profile);
+      // The full shared profile (not the auth snapshot) so phone, location
+      // and links reach the PDF.
+      final user = await ref.read(currentProfileProvider.future);
+      if (user == null) return 'Please sign in again to export.';
 
       final pdfService = LocalPdfGeneratorService();
       final pdfBytes = await pdfService.generatePdf(

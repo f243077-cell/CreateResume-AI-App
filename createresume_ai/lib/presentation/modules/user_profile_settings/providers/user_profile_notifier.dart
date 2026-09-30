@@ -1,8 +1,8 @@
-import 'package:createresume_app/presentation/modules/home_dashboard/providers/home_dashboard_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../application/providers/auth_state_provider.dart';
+import '../../../../application/providers/current_profile_provider.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../domain/entities/user.dart';
 
@@ -31,23 +31,12 @@ const _sentinel = Object();
 class UserProfileNotifier extends Notifier<UserProfileState> {
   @override
   UserProfileState build() {
-    _loadProfile();
-    return const UserProfileState(isLoading: true);
-  }
-
-  Future<void> _loadProfile() async {
-    final userAuth = ref.read(authStateProvider).value;
-    if (userAuth == null) {
-      state = const UserProfileState(error: 'Not authenticated');
-      return;
-    }
-
-    final getProfile = ref.watch(getUserProfileUseCaseProvider);
-    final result = await getProfile(userId: userAuth.id);
-
-    result.fold(
-      (l) => state = state.copyWith(isLoading: false, error: l.message),
-      (profile) => state = state.copyWith(isLoading: false, profile: profile),
+    // The shared profile (E3); edits below update it for every screen.
+    final profile = ref.watch(currentProfileProvider);
+    return UserProfileState(
+      profile: profile.value,
+      isLoading: profile.isLoading,
+      error: profile.hasError ? profile.error.toString() : null,
     );
   }
 
@@ -70,18 +59,15 @@ class UserProfileNotifier extends Notifier<UserProfileState> {
     result.fold(
       (l) => state = state.copyWith(isLoading: false, error: l.message),
       (photoUrl) {
-        if (state.profile != null) {
-          final updated = state.profile!.copyWith(photoUrl: photoUrl);
-          state = state.copyWith(isLoading: false, profile: updated);
+        final profile = state.profile;
+        if (profile != null) {
+          // Updates the dashboard avatar too; no refetch needed.
+          ref
+              .read(currentProfileProvider.notifier)
+              .setProfile(profile.copyWith(photoUrl: photoUrl));
         } else {
           state = state.copyWith(isLoading: false);
         }
-        // homeDashboardProvider now fetches the full profile (including
-        // photoUrl) directly via getUserProfileUseCaseProvider instead of
-        // relying on authStateProvider's cached snapshot — so invalidating
-        // authStateProvider is no longer needed, and avoids forcing
-        // routerProvider (which watches it) to rebuild the whole app.
-        ref.invalidate(homeDashboardProvider);
       },
     );
   }
@@ -122,8 +108,8 @@ class UserProfileNotifier extends Notifier<UserProfileState> {
     result.fold(
       (l) => state = state.copyWith(isLoading: false, error: l.message),
       (updatedProfile) {
-        state = state.copyWith(isLoading: false, profile: updatedProfile);
-        ref.invalidate(homeDashboardProvider);
+        // Every screen showing the profile updates from this.
+        ref.read(currentProfileProvider.notifier).setProfile(updatedProfile);
       },
     );
   }
